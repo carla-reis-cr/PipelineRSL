@@ -1,278 +1,349 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
+![Status](https://img.shields.io/badge/status-research%20artifact-blue)
 ![Last Commit](https://img.shields.io/github/last-commit/jsaranda/LiteraturaReviewPipeline)
 
-# lit_review_pipeline — busca e triagem para revisão sistemática
+# Literature-search and screening pipeline
 
-Pipeline em Python (scripts independentes, sem framework) para automatizar a
-parte pesada de uma revisão sistemática de literatura: busca em várias bases,
-remoção de impurezas, triagem por título e por abstract com apoio de LLM,
-combinação e deduplicação, e geração da planilha para a leitura em três
-passadas. O fluxo segue o funil clássico:
+This repository contains the reproducible search, screening, combination, and
+deduplication workflow developed for the systematic literature review:
 
+> **Agentic AI in Logistics Operations: A Systematic Literature Review and
+> Taxonomies**
+
+The pipeline supports the computationally intensive stages of the review. It
+does **not** replace researcher judgment. The eligibility criteria, screening
+instructions, and final full-text decisions were defined and controlled by the
+authors. Claude Haiku 4.5 was used only for batched title and abstract
+classification against fixed protocol criteria. The three-pass reading and
+final full-text eligibility decisions were performed manually.
+
+## Workflow overview
+
+Each bibliographic source was processed separately through impurity removal,
+title screening, and abstract screening. Records were combined and
+deduplicated only after these source-level stages so that source-specific
+funnel counts remained traceable.
+
+```text
+Initial search
+  -> Impurity removal
+  -> Title screening
+  -> Abstract screening
+  -> Combination and deduplication
+  -> Short-paper filter
+  -> Manual three-pass reading
+  -> Manual full-text eligibility decision
 ```
-Initial Search → Impurity Removal → Filter by Title → Filter by Abstract
-→ Combination → Duplicate Removal → Addition by Heuristics → Three-pass filter
+
+The review began with 20,092 records retrieved from nine bibliographic sources
+and retained 30 primary studies. The public supplementary workbook contains
+the final study identifiers, metadata, classifications, quality assessment,
+evidence maturity, and analytical summary used in the manuscript.
+
+## Supplementary review dataset
+
+The reviewer-facing dataset supporting the systematic literature review is
+available at:
+
+[`supplementary/Agentic_AI_Logistics_Supplementary_Dataset.xlsx`](supplementary/Agentic_AI_Logistics_Supplementary_Dataset.xlsx)
+
+The workbook contains the final 30-study corpus, bibliographic metadata,
+study-level classifications, quality-assessment scores, evidence-maturity
+levels, analytical mappings, and consolidated descriptive results reported in
+the manuscript.
+
+Study identifiers S01–S30 correspond directly to the identifiers used in the
+manuscript tables and figures. The workbook contains the final validated
+classifications and omits internal working notes, preliminary suggestions, and
+superseded counts.
+
+The full texts of the primary studies are not redistributed because they
+remain subject to their respective publishers' copyright and access
+conditions. Readers can access the publications through the DOI and URL
+metadata provided in the workbook.
+
+## Methodological responsibility and AI-assisted screening
+
+The title and abstract stages use the Anthropic Message Batches API. The
+default model recorded in `config.py` is:
+
+```text
+claude-haiku-4-5-20251001
 ```
 
-Cada base percorre o próprio funil (impurezas → título → abstract) e só no fim
-tudo é combinado e deduplicado — assim a tabela "por base" do artigo sai
-direto dos arquivos intermediários.
+The model did not receive an open-ended request to judge relevance. The exact
+classification instructions are embedded in:
 
-O pipeline foi usado pela primeira vez na revisão *"AI Agents and Agentic AI in
-Logistics Operations: A Systematic Literature Review and Taxonomy"*. A string
-de busca, a janela temporal e os critérios dessa revisão estão em `config.py`
-como exemplo — para outra revisão, troque-os lá (e ajuste os prompts das
-etapas 06 e 11, que descrevem o tema em linguagem natural).
+- `pipeline/06_llm_title_screening_submit.py`
+- `pipeline/11_llm_abstract_screening_submit.py`
 
----
+These instructions operationalize the protocol's inclusion and exclusion
+criteria and require a structured `include` or `exclude` label plus a short
+reason. Title requests contain at most 75 records, abstract requests at most
+15 records, and both use `max_tokens=4096`. No temperature is explicitly set,
+so the provider default applies.
 
-## 1. Instalação
+Before full-scale title screening, a reproducible stratified pilot sampled six
+titles per source (`random.seed(42)`). Nine sources were represented, yielding
+54 titles. The pilot was manually classified and used to refine the fixed
+instructions before batch execution. Formal pilot sensitivity, specificity,
+or agreement statistics were not preserved and are therefore not claimed.
+
+The LLM-generated labels supported only title and abstract screening. An
+offline heuristic later ranked full texts to prioritize inspection, but it did
+not determine eligibility. Manual three-pass reading and manual full-text
+assessment produced the final corpus. No independent random audit of the
+model-excluded records was preserved.
+
+## Requirements
+
+- Python 3.10 or newer
+- Dependencies listed in `requirements.txt`
+- API credentials for the sources used in a new execution
 
 ```bash
-git clone <este repositório>
-cd lit_review_pipeline
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+git clone https://github.com/jsaranda/LiteraturaReviewPipeline.git
+cd LiteraturaReviewPipeline
+python -m venv .venv
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Requer Python 3.10+.
+All commands below must be run from the repository root because data paths are
+relative to that directory.
 
-### Credenciais
+## Credentials
 
-Nenhuma chave fica no código. Copie `.env.example` para `.env` e preencha:
+Secrets are read from environment variables or a local `.env` file and must
+never be committed.
 
-| Variável | Para quê | Onde obter |
-|---|---|---|
-| `SPRINGER_API_KEY` | Springer Nature Meta API | https://dev.springernature.com/ |
-| `ELSEVIER_API_KEY` | Scopus Search API, Abstract Retrieval API, ScienceDirect | https://dev.elsevier.com/ |
-| `ELSEVIER_INST_TOKEN` | opcional; só se a Elsevier fornecer (uso fora da rede institucional) | e-mail à Elsevier |
-| `IEEE_API_KEY` | IEEE Xplore Metadata Search API | https://developer.ieee.org/ |
-| `ANTHROPIC_API_KEY` | triagem por LLM (etapas 06/07 e 11/12) | https://console.anthropic.com/ |
-| `OPENALEX_MAILTO` | seu e-mail (OpenAlex "polite pool"; não é chave) | — |
-| `LLM_MODEL` | opcional; modelo da triagem (padrão `claude-haiku-4-5-20251001`) | — |
+| Variable | Purpose |
+|---|---|
+| `SPRINGER_API_KEY` | Springer Nature Meta API |
+| `ELSEVIER_API_KEY` | Scopus and, when entitled, ScienceDirect APIs |
+| `ELSEVIER_INST_TOKEN` | Optional Elsevier institutional token |
+| `IEEE_API_KEY` | IEEE Xplore Metadata API |
+| `ANTHROPIC_API_KEY` | Batched title and abstract screening |
+| `OPENALEX_MAILTO` | Contact email for the OpenAlex polite pool |
+| `LLM_MODEL` | Optional model override; defaults to `claude-haiku-4-5-20251001` |
 
-O `.env` está no `.gitignore`. Se preferir, exporte as variáveis no shell em vez
-de usar o arquivo. Um script que precisa de uma chave ausente aborta com uma
-mensagem dizendo qual variável falta.
+## Repository structure
 
-**Todos os scripts devem ser executados a partir da raiz do projeto** (os
-caminhos `data/...` são relativos a ela).
-
----
-
-## 2. Estrutura
-
-```
-config.py                   protocolo (string de busca, critérios, janela) + credenciais via .env
-connectors/                 busca automática por API → data/raw/<base>_results.csv
-  base.py                   schema comum (Paper) e normalização de DOI/título
-  openalex.py  springer.py  scopus.py  ieee_xplore.py  sciencedirect.py
-  diagnostics/              testes de chave/query e contagem de totais (opcionais)
-ingest/manual_import.py     lê exportações BibTeX/CSV de data/manual_exports/
-pipeline/                   etapas numeradas, na ordem de execução (01 → 16)
-  extras/                   relatórios e amostragens para conferência (não geram arquivos do fluxo)
-heuristics/                 "Addition by Heuristics": reavaliação manual de candidatos a falso negativo
+```text
+config.py                    Search protocol, date window, criteria, and settings
+connectors/                  API connectors using a shared record schema
+  diagnostics/              Low-cost API and query diagnostics
+ingest/manual_import.py      BibTeX/CSV import for manually exported sources
+pipeline/                    Numbered pipeline stages, executed from 01 to 16
+  extras/                    Read-only checks, reports, and calibration sampling
+heuristics/                  Manual false-negative review support
 data/
-  raw/                      saída dos conectores (ignorado pelo git)
-  manual_exports/           .bib/.csv exportados à mão das bases sem API (ignorado pelo git)
-  processed/                arquivos intermediários e finais (ignorado pelo git)
-  heuristic_lists/          listas de títulos para heuristics/ (exemplos da primeira revisão)
-  initial_search_counts.json  totais da busca inicial por base (preenchido à mão, ver §5)
+  raw/                       Connector outputs; not versioned
+  manual_exports/            Manual BibTeX/CSV exports; not versioned
+  processed/                 Intermediate and final outputs; not versioned
+  heuristic_lists/           Candidate lists for manual reassessment
+  initial_search_counts.json Source-level initial counts
+supplementary/
+  Agentic_AI_Logistics_Supplementary_Dataset.xlsx
+                              Public reviewer-facing review dataset
 ```
 
-Os arquivos de dados não são versionados (facilmente passam de 250 MB). Cada
-pessoa gera os seus rodando o pipeline.
+The shared raw-record schema is:
 
----
-
-## 3. Etapa 0 — Initial Search (coleta)
-
-### 3a. Bases com API
-
-```bash
-python connectors/openalex.py        # sem chave
-python connectors/springer.py        # 500 req/dia; retomável: python connectors/springer.py <start>
-python connectors/scopus.py          # não retorna abstract (resolvido na etapa 10)
-python connectors/ieee_xplore.py     # 200 req/dia
-python connectors/sciencedirect.py   # só se a chave Elsevier tiver entitlement (senão dá 401 → use exportação manual)
+```text
+source_db, title, authors, year, venue, doi, abstract, url, raw_id, query_used
 ```
 
-Cada um grava `data/raw/<base>_results.csv` no schema comum
-(`source_db, title, authors, year, venue, doi, abstract, url, raw_id, query_used`).
-Os conectores respeitam os limites de cota e imprimem de onde retomar caso a
-cota diária acabe (o da Springer faz *append* no CSV ao retomar). Antes de
-uma busca completa, vale rodar os `connectors/diagnostics/*_test.py` para
-confirmar que a chave está ativa sem gastar cota.
+## Search sources
 
-### 3b. Bases sem API (exportação manual)
+The review covered nine bibliographic sources: ACM Digital Library, IEEE
+Xplore, OpenAlex, ScienceDirect, Scopus, SpringerLink, Taylor & Francis, Web of
+Science, and Wiley. Some sources were queried by API and others through manual
+BibTeX/CSV exports because access and export capabilities differed.
 
-ACM DL, Wiley, Taylor & Francis, Web of Science, ScienceDirect (via site) e
-Google Scholar (via *Publish or Perish*): faça a busca no site com a mesma
-string de `config.py`, exporte em **BibTeX** (ou CSV, no caso do Publish or
-Perish) e salve em `data/manual_exports/` com o nome começando pelo prefixo da
-base — ele é o que define o `source_db`:
+Automated connectors are provided for OpenAlex, Springer, Scopus, IEEE Xplore,
+and ScienceDirect. Manual exports are imported according to the filename
+prefixes below.
 
-| Prefixo do arquivo | source_db |
+| Filename prefix | Source label |
 |---|---|
-| `acm_*` | acm_dl |
-| `wiley_*` | wiley |
-| `tandf_*` ou `taylor_*` | taylor_francis |
-| `wos_*` | web_of_science |
-| `sciencedirect_*` ou `sd_*` | sciencedirect |
-| `google_scholar_*` ou `scholar_*` | google_scholar |
+| `acm_*` | `acm_dl` |
+| `wiley_*` | `wiley` |
+| `tandf_*` or `taylor_*` | `taylor_francis` |
+| `wos_*` | `web_of_science` |
+| `sciencedirect_*` or `sd_*` | `sciencedirect` |
+| `google_scholar_*` or `scholar_*` | `google_scholar` |
 
-Confira a contagem com `python ingest/manual_import.py`. Os `.bib` originais
-são lidos de novo nas etapas 02 e 15 (tipo de publicação e número de páginas),
-então mantenha-os na pasta até o fim.
+The search string, date window, and protocol criteria are centralized in
+`config.py`. Source-specific connectors adapt the same conceptual string only
+to the syntax required by each platform.
 
----
+## Running the collection stage
 
-## 4. Pipeline principal (`pipeline/01_…16_`)
-
-Rode na ordem. Cada script lê o arquivo da etapa anterior em
-`data/processed/` e grava o seguinte; os scripts imprimem as contagens
-(antes / excluídos / restantes) que vão para a tabela do funil.
-
-| # | Script | Lê | Gera | O que faz |
-|---|---|---|---|---|
-| 01 | `01_build_raw_pool.py` | `data/raw/*.csv` + `data/manual_exports/*` | `raw_pool_no_dedup.csv` | Junta tudo **sem** deduplicar (ponto de partida do funil por base) |
-| 02 | `02_check_publication_type.py` | raw_pool | `publication_type_check.csv` | Tipo de publicação (do `.bib`) + flag de título suspeito (erratum, editorial…) |
-| 03 | `03_apply_impurity_filters.py` | publication_type_check | `after_type_filter.csv` | Remove livros, proceedings inteiros, capítulos, relatórios, títulos suspeitos (EC1/EC2) |
-| 04 | `04_check_language.py` | raw_pool | `language_check.csv` | Detecta idioma por título+abstract (`langdetect`, seed fixa) |
-| 05 | `05_apply_language_filter.py` | after_type_filter + language_check | `after_language_filter.csv` | Remove não-inglês confirmado (EC10). **Fim do Impurity Removal** |
-| 06 | `06_llm_title_screening_submit.py` | after_language_filter | `title_screening_batches_registry.json` | Envia títulos ao Claude (Batch API) em fatias de 3.000 |
-| 07 | `07_llm_title_screening_retrieve.py` | registry | `title_screening_results.csv` | Recupera as decisões dos batches prontos (acumulativo) |
-| 08 | `08_apply_title_filter.py` | title_screening_results | `after_title_filter.csv` | Mantém só `include` |
-| 09 | `09_apply_ssrn_retracted_filter.py` | after_title_filter | `after_title_filter_clean.csv` | Remove preprints SSRN e retratados. **Fim do Filter by Title** |
-| 10 | `10_fetch_missing_scopus_abstracts.py` | after_title_filter_clean | `after_title_filter_with_abstracts.csv` | Busca abstracts do Scopus na Abstract Retrieval API (1 chamada/DOI) |
-| 11 | `11_llm_abstract_screening_submit.py` | with_abstracts (ou clean, se 10 não rodou) | `abstract_screening_batches_registry.json` | Envia título+venue+abstract ao Claude (Batch API) |
-| 12 | `12_llm_abstract_screening_retrieve.py` | registry | `abstract_screening_results.csv` | Recupera as decisões |
-| 13 | `13_apply_abstract_filter.py` | abstract_screening_results | `after_abstract_filter.csv` | Mantém só `include`. **Fim do Filter by Abstract** |
-| 14 | `14_final_combination.py` | after_abstract_filter | `final_combined_deduplicated.csv` | **Combination + Duplicate Removal** por DOI (fallback título); entre duplicatas, prefere a cópia com abstract |
-| 15 | `15_apply_short_paper_filter.py` | final_combined_deduplicated + `.bib` | `final_after_ec6.csv` | Remove artigos com ≤ 4 páginas (só bases manuais têm essa info) |
-| 16 | `16_generate_three_pass_tracking_sheet.py` | final_after_ec6 | `Three_Pass_Tracking.xlsx` | Planilha de acompanhamento da leitura em três passadas (coluna "Válido? S/N") |
-
-### Como funcionam as etapas de LLM (06/07 e 11/12)
-
-As triagens usam a **Message Batches API** da Anthropic (50 % mais barata,
-processamento assíncrono). O fluxo é *submit → esperar alguns minutos →
-retrieve*, repetido até o submit dizer "Tudo processado!":
+### API-enabled sources
 
 ```bash
-python pipeline/06_llm_title_screening_submit.py     # envia a próxima fatia pendente
-# ... aguarde (minutos) ...
-python pipeline/07_llm_title_screening_retrieve.py   # funde o que já terminou no CSV
-python pipeline/06_llm_title_screening_submit.py     # próxima fatia (reenvia falhas de parse automaticamente)
+python connectors/openalex.py
+python connectors/springer.py
+python connectors/scopus.py
+python connectors/ieee_xplore.py
+python connectors/sciencedirect.py
 ```
 
-O progresso fica em `*_batches_registry.json` + `*_results.csv`, então dá para
-parar e continuar outro dia. Os prompts (critérios em linguagem natural) estão
-no topo de `06_…submit.py` e `11_…submit.py` — são a parte a adaptar para outra
-revisão. Custo de referência (Haiku 4.5, out/2025): ~US$ 0,19 por 3.000
-títulos; < US$ 0,50 para ~2.000 abstracts.
+The ScienceDirect API may require additional entitlement. When it is not
+available, use a manual export and import it with the same workflow as the
+other manually accessed sources.
 
-Antes de aplicar o filtro (08 / 13), confira uma amostra das decisões com
-`pipeline/extras/sample_titles_for_calibration.py` e
-`pipeline/extras/sample_abstract_decisions.py`.
+### Manual exports
 
----
-
-## 5. Extras (conferência, opcionais)
-
-Todos em `pipeline/extras/`, só imprimem no terminal, nunca alteram o fluxo:
-
-| Script | Quando usar |
-|---|---|
-| `report_per_base_funnel.py` | Tabela do funil por base (Initial → Impurity → Title → Abstract). A coluna *Initial* vem de `data/initial_search_counts.json`, preenchido à mão com o total que cada base reportou (os `connectors/diagnostics/*_count_check.py` ajudam); sem o arquivo, usa a contagem do pool bruto |
-| `review_language_flags.py [idioma]` | Lista os títulos marcados como não-inglês pela etapa 04, antes de aplicar a 05 |
-| `sample_titles_for_calibration.py` | Amostra estratificada de títulos para calibrar o prompt da etapa 06 |
-| `sample_abstract_decisions.py` | Amostra das decisões da etapa 12 (include/exclude por base) para revisão |
-| `check_ssrn_and_retracted.py` | Pré-visualiza o que a etapa 09 vai remover |
-| `check_abstract_coverage.py` | % de registros com abstract por base após o Filter by Title |
-| `check_abstract_recovery_via_dedup.py` | Quantos "sem abstract" têm duplicata com abstract em outra base |
-| `check_short_papers.py` | Pré-visualiza o que a etapa 15 vai remover |
-| `diag_scopus_abstract_retrieval.py` | Testa a Abstract Retrieval API com um DOI (usado para descobrir que é preciso `view=FULL`) |
-
----
-
-## 6. Addition by Heuristics (`heuristics/`)
-
-Parte **manual** do processo: depois do Filter by Title, revisa-se a lista de
-excluídos em busca de falsos negativos (ex.: títulos com só um dos dois blocos
-da string de busca, ou com ambos mas ainda assim excluídos pelo LLM). Isso
-gera listas de candidatos que precisam ser lidos pelo abstract. Os scripts:
-
-1. **Monte a lista** de candidatos num `.txt` (uma linha por artigo, formato
-   `source_db|~|título|~|ano|~|venue|~|url`). Os três arquivos em
-   `data/heuristic_lists/` são as listas reais da primeira revisão e servem
-   de exemplo de formato — apague-os ou substitua pelos seus.
-2. `python heuristics/check_abstract_for_list.py data/heuristic_lists/lista.txt`
-   → gera `data/processed/Abstracts_lista.xlsx` com o abstract de cada artigo
-   que já esteja em algum CSV intermediário.
-3. `python heuristics/fetch_abstracts_for_list.py data/heuristic_lists/lista.txt`
-   → para os que ficaram sem abstract, tenta buscar na OpenAlex e no Semantic
-   Scholar (sem chave). Gera `lista_com_abstracts.csv` ao lado da lista.
-4. `python heuristics/prioritize_list_review.py data/processed/Abstracts_lista.xlsx`
-   → adiciona uma coluna "Prioridade" (ALTA = menciona LLM/agentic/etc.,
-   BAIXA = só multiagente clássico) para você ler primeiro o que importa.
-5. Os artigos aprovados nessa revisão manual entram no corpus final à mão
-   (na planilha da etapa 16).
-
----
-
-## 7. Resumo de uma execução completa
+Place BibTeX or CSV files in `data/manual_exports/`, using one of the prefixes
+listed above, and run:
 
 ```bash
-# 0. coleta
-python connectors/openalex.py; python connectors/springer.py
-python connectors/scopus.py;   python connectors/ieee_xplore.py
-#    + exportações manuais em data/manual_exports/
+python ingest/manual_import.py
+```
 
-# 1. impurity removal
+Keep the original BibTeX files available until the pipeline finishes because
+the document-type and page-count stages reuse them.
+
+## Numbered pipeline stages
+
+| # | Script | Main output | Purpose |
+|---:|---|---|---|
+| 01 | `01_build_raw_pool.py` | `raw_pool_no_dedup.csv` | Combines source files without deduplication |
+| 02 | `02_check_publication_type.py` | `publication_type_check.csv` | Extracts publication type and flags suspicious titles |
+| 03 | `03_apply_impurity_filters.py` | `after_type_filter.csv` | Applies document-type impurity filters |
+| 04 | `04_check_language.py` | `language_check.csv` | Detects language from title and abstract |
+| 05 | `05_apply_language_filter.py` | `after_language_filter.csv` | Removes confirmed non-English records |
+| 06 | `06_llm_title_screening_submit.py` | title batch registry | Submits title batches using fixed instructions |
+| 07 | `07_llm_title_screening_retrieve.py` | `title_screening_results.csv` | Retrieves and consolidates title labels |
+| 08 | `08_apply_title_filter.py` | `after_title_filter.csv` | Applies title-screening labels |
+| 09 | `09_apply_ssrn_retracted_filter.py` | `after_title_filter_clean.csv` | Removes SSRN preprints and retracted records |
+| 10 | `10_fetch_missing_scopus_abstracts.py` | enriched title-screened records | Retrieves missing Scopus abstracts |
+| 11 | `11_llm_abstract_screening_submit.py` | abstract batch registry | Submits title, venue, and abstract batches |
+| 12 | `12_llm_abstract_screening_retrieve.py` | `abstract_screening_results.csv` | Retrieves and consolidates abstract labels |
+| 13 | `13_apply_abstract_filter.py` | `after_abstract_filter.csv` | Applies abstract-screening labels |
+| 14 | `14_final_combination.py` | `final_combined_deduplicated.csv` | Combines sources and deduplicates by DOI/title |
+| 15 | `15_apply_short_paper_filter.py` | `final_after_ec6.csv` | Removes papers of four pages or fewer when page data exist |
+| 16 | `16_generate_three_pass_tracking_sheet.py` | `Three_Pass_Tracking.xlsx` | Creates the worksheet for manual three-pass reading |
+
+### Batched title screening
+
+```bash
+python pipeline/06_llm_title_screening_submit.py
+# wait for the asynchronous batch
+python pipeline/07_llm_title_screening_retrieve.py
+```
+
+Repeat until the submit script reports that no records remain. Batch registries
+and result CSV files allow interrupted runs to resume without relabeling
+completed records.
+
+### Batched abstract screening
+
+```bash
+python pipeline/10_fetch_missing_scopus_abstracts.py
+python pipeline/11_llm_abstract_screening_submit.py
+# wait for the asynchronous batch
+python pipeline/12_llm_abstract_screening_retrieve.py
+python pipeline/13_apply_abstract_filter.py
+```
+
+When no abstract is available, the classifier receives the title and venue and
+is instructed to exclude the record if the available evidence is insufficient
+to confirm all inclusion criteria.
+
+## Complete execution sequence
+
+```bash
+# Collection
+python connectors/openalex.py
+python connectors/springer.py
+python connectors/scopus.py
+python connectors/ieee_xplore.py
+# Add manual exports to data/manual_exports/
+
+# Impurity removal
 python pipeline/01_build_raw_pool.py
 python pipeline/02_check_publication_type.py
 python pipeline/03_apply_impurity_filters.py
 python pipeline/04_check_language.py
-python pipeline/extras/review_language_flags.py      # opcional
+python pipeline/extras/review_language_flags.py   # optional check
 python pipeline/05_apply_language_filter.py
 
-# 2. filter by title (repita 06/07 até "Tudo processado!")
+# Title screening
 python pipeline/06_llm_title_screening_submit.py
 python pipeline/07_llm_title_screening_retrieve.py
 python pipeline/08_apply_title_filter.py
 python pipeline/09_apply_ssrn_retracted_filter.py
 
-# 3. filter by abstract
+# Abstract screening
 python pipeline/10_fetch_missing_scopus_abstracts.py
 python pipeline/11_llm_abstract_screening_submit.py
 python pipeline/12_llm_abstract_screening_retrieve.py
-python pipeline/extras/sample_abstract_decisions.py   # opcional
+python pipeline/extras/sample_abstract_decisions.py  # optional check
 python pipeline/13_apply_abstract_filter.py
 
-# 4. combination + dedup + EC6 + planilha
+# Combination, deduplication, and manual-reading worksheet
 python pipeline/14_final_combination.py
 python pipeline/15_apply_short_paper_filter.py
 python pipeline/16_generate_three_pass_tracking_sheet.py
 
-# 5. funil por base para o artigo
+# Source-level funnel report
 python pipeline/extras/report_per_base_funnel.py
 ```
 
----
+## Optional checks and reports
 
-## 8. Limitações conhecidas
+Scripts in `pipeline/extras/` read the available outputs and do not alter the
+main workflow.
 
-- A Scopus Search API e a ScienceDirect Search API não devolvem abstract; a
-  etapa 10 resolve para o Scopus (uma chamada por DOI). Registros de bases
-  manuais sem abstract no `.bib` são julgados na etapa 11 só por título+venue,
-  com instrução de excluir na dúvida.
-- Tipo de publicação (etapa 02) e número de páginas (etapa 15) só existem
-  para as bases importadas por BibTeX; para as bases via API vale apenas a
-  heurística de título suspeito.
-- `langdetect` erra em textos muito curtos; a etapa 04 marca como `unknown`
-  (e não exclui) qualquer registro com menos de 60 caracteres.
-- Os conectores foram escritos contra a documentação pública de cada API em
-  2025; se uma API mudar, `connectors/diagnostics/` ajuda a isolar o problema
-  sem gastar cota.
+| Script | Purpose |
+|---|---|
+| `report_per_base_funnel.py` | Reports source-level counts across search and screening stages |
+| `review_language_flags.py` | Lists records marked as non-English before exclusion |
+| `sample_titles_for_calibration.py` | Produces the reproducible stratified title pilot |
+| `sample_abstract_decisions.py` | Samples abstract-screening labels for inspection |
+| `check_ssrn_and_retracted.py` | Previews records targeted by the SSRN/retraction filter |
+| `check_abstract_coverage.py` | Reports abstract availability after title screening |
+| `check_abstract_recovery_via_dedup.py` | Finds duplicates that may supply missing abstracts |
+| `check_short_papers.py` | Previews records targeted by the short-paper filter |
+| `diag_scopus_abstract_retrieval.py` | Tests Scopus abstract retrieval for one DOI |
+
+## Manual false-negative reassessment support
+
+The `heuristics/` scripts help researchers inspect candidates that may have
+been excluded too early. They retrieve available abstracts, attempt additional
+abstract recovery, and assign review priority using transparent term-based
+rules. The priority is not an eligibility decision; researchers must read and
+decide on each candidate manually.
+
+## Reproducibility notes and limitations
+
+- Raw and processed bibliographic files are not versioned because they may be
+  large and may contain database-export content subject to license terms.
+- Search results can change when databases update their coverage or APIs.
+- ScienceDirect and Scopus API responses depend on institutional entitlement.
+- Some manually exported records do not include abstracts. In those cases,
+  the abstract-screening stage has less evidence available.
+- Publication type and page count are most reliable for BibTeX imports; API
+  records may depend on metadata completeness and title-based checks.
+- `langdetect` can be unreliable for very short text. Records with fewer than
+  60 characters are retained as `unknown` rather than automatically excluded.
+- The LLM-assisted labels may vary with model version, provider defaults, and
+  instruction wording. The exact model identifier and instructions are kept
+  in the source code for auditability.
+- The calibration pilot contained 54 manually classified titles, but formal
+  diagnostic metrics were not preserved. No quantitative performance claim is
+  made for the screening model.
+- Final inclusion required manual reading; therefore, the repository should be
+  interpreted as a reproducible screening aid, not as an autonomous study
+  selection system.
+
+## Data and copyright
+
+The supplementary workbook distributes bibliographic metadata, study-level
+codes, quality scores, and analytical mappings. It does not redistribute the
+primary-study full texts. Readers should access those publications through the
+DOIs and URLs provided in the dataset, subject to the relevant publishers'
+copyright and access conditions.
