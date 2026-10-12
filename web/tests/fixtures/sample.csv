@@ -1,0 +1,5 @@
+source_db,title,authors,year,venue,doi,abstract,url,raw_id,query_used,doc_type,language,keywords
+scopus,Using large language models for feedback in entrepreneurship education,A,2023,C&E,10.1/a,"We study how ChatGPT gives feedback to students.",,,,Article,English,LLM; feedback
+ieee_xplore,Tutorial: machine learning for entrepreneurial learning,B,2022,Conf,10.1/b,"A tutorial on random forest.",,,,Conferences,,
+scopus,Entrepreneurship education and firm performance,C,2021,J,10.1/c,"Financial performance of firms.",,,,Article,English,
+scopus,Deep learning for entrepreneurial mindset,D,2024,J,,,,,,Review,Portuguese,

@@ -1,0 +1,26 @@
+:root{
+  --bg:#F3F6F6; --surface:#FFFFFF; --sunken:#E8EEEE; --line:#D3DCDC; --ink:#13252A; --muted:#55686D;
+  --accent:#1C6670; --accent-ink:#FFFFFF; --accent-soft:#DCEDEE; --ok:#2C7A4E; --warn:#9A6514; --stop:#9C3445;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0F1A1C; --surface:#162427; --sunken:#1C2E31; --line:#2A3F43; --ink:#E4EEEE; --muted:#9AB0B3;
+  --accent:#6FC2CB; --accent-ink:#0F1A1C; --accent-soft:#1D3A3E; --ok:#7FCB9C; --warn:#E3B566; --stop:#EE8D9C; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+main{max-width:1100px;margin:0 auto;padding:28px 20px 64px;display:flex;flex-direction:column;gap:18px}
+h1{font-size:1.6rem;margin:0}h2{font-size:1.15rem;margin:0}
+p{margin:0}.muted{color:var(--muted)}.mono{font-family:var(--f-mono)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:4px;padding:7px 13px;font:inherit;font-weight:500;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent);border-color:var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+input,select,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 9px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th{text-align:left;font-family:var(--f-mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--sunken);padding:7px 10px}
+td{padding:7px 10px;border-top:1px solid var(--line)}td.n,th.n{text-align:right;font-family:var(--f-mono)}
+.err{color:var(--stop)}.ok{color:var(--ok)}
+.bar{height:6px;background:var(--sunken);border-radius:3px;overflow:hidden}.bar span{display:block;height:100%;background:var(--accent)}
+pre{font-family:var(--f-mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;background:var(--sunken);padding:8px;border-radius:4px;margin:0}
+a{color:var(--accent)}

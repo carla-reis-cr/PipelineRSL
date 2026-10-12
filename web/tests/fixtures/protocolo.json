@@ -1,0 +1,184 @@
+{
+  "blind": true,
+  "blocks": [
+    {
+      "name": "Entrepreneurial Education",
+      "terms": "entrepreneurial competenc*\nentrepreneurial skill*\nentrepreneurial abilit*\nentrepreneurial behavio*\nentrepreneurship education\nentrepreneurial learning\nentrepreneurial education\nentrepreneurship training\nentrepreneurial mindset\nentrepreneurship learning"
+    },
+    {
+      "name": "Artificial Intelligence",
+      "terms": "artificial intelligence\nmachine learning\ndeep learning\nnatural language processing\nNLP\nAI agent*\nagentic AI\nintelligent agent*\nLLM agent*\nlarge language model*\ngenerative agent*\nLLM\ngenerative AI\nadaptive learning"
+    }
+  ],
+  "comp": "",
+  "compPurpose": "para avaliar o índice de sobreposição",
+  "ctx": "",
+  "docTypes": {
+    "conference": true,
+    "journal": true
+  },
+  "docTypesText": "Serão incluídos exclusivamente artigos de periódicos revisados por pares (Research Articles) e trabalhos publicados em anais de conferências (Conference Proceedings), devido à alta relevância, rigor e rapidez de publicação das conferências na área de Computação Aplicada.",
+  "ec": [
+    {
+      "c": "EC1",
+      "t": "Estudos puramente econômicos ou focados exclusivamente no desempenho financeiro de empresas, sem avaliação do comportamento do indivíduo.",
+      "rule": {
+        "type": "terms",
+        "terms": "financial performance\nfirm performance\neconomic growth\nstock market\nGDP\nprofitability",
+        "fields": {
+          "title": true,
+          "abstract": false,
+          "keywords": true
+        }
+      }
+    },
+    {
+      "c": "EC2",
+      "t": "Literatura cinzenta (resumos expandidos, tutoriais, prefácios).",
+      "rule": {
+        "type": "terms",
+        "terms": "extended abstract\ntutorial\npreface\nposter\nkeynote\nworkshop summary\npanel",
+        "fields": {
+          "title": true,
+          "abstract": false,
+          "keywords": false
+        }
+      }
+    }
+  ],
+  "excludedTypes": "book, proceedings, techreport, inbook, incollection, book chapter, editorial, editorial material, erratum, correction, letter, note, conference review, book review, meeting abstract, retracted, retraction",
+  "fields": {
+    "abstract": true,
+    "keywords": true,
+    "title": true
+  },
+  "gq": {
+    "en": "How has Artificial Intelligence been applied in entrepreneurial education?",
+    "label": "General Question",
+    "pt": "Como a Inteligência Artificial tem sido aplicada na educação empreendedora?"
+  },
+  "ic": [
+    {
+      "c": "IC1",
+      "t": "Estudos empíricos primários aplicados ao contexto educacional e de ensino."
+    },
+    {
+      "c": "IC2",
+      "t": "Trabalhos que implementem ou proponham o uso de IA, sistemas inteligentes, adaptativos ou agênticos.",
+      "rule": {
+        "type": "block",
+        "block": "1",
+        "fields": {
+          "title": true,
+          "abstract": true,
+          "keywords": true
+        }
+      }
+    },
+    {
+      "c": "IC3",
+      "t": "Artigos publicados em inglês.",
+      "rule": {
+        "type": "lang"
+      }
+    }
+  ],
+  "int": "",
+  "langFilter": true,
+  "langs": "English",
+  "logic": "Competência Empreendedora → Evidências / Indicadores Observáveis → Fontes de Dados → Método / Técnica de IA → Finalidade de Aplicação.",
+  "objective": "O objetivo desta revisão é mapear como a literatura científica aborda o desenvolvimento e o acompanhamento de competências e comportamentos empreendedores mediados por inteligência artificial, afastando-se da visão de \"perfil estático\" para focar na evolução dinâmica.",
+  "objectives": "",
+  "out": "",
+  "pop": "",
+  "question": "",
+  "reviewers": "2",
+  "rqIntro": "As questões foram estruturadas para compor a matriz de extração técnica do estudo:",
+  "searchIntro": "Foi estruturada em dois blocos obrigatórios de interseção (AND), garantindo o cruzamento exato entre o contexto Educação Empreendedora e a Inteligência Artificial.",
+  "selection": "1. Triagem (Screening): Os metadados serão importados (formato BibTeX/RIS) para a ferramenta Parsifal visando a remoção de duplicatas e a leitura de Título/Resumo. Esta etapa inicial poderá contar com apoio de automação via algoritmos/IA para acelerar a extração.\n2. Avaliação de Qualidade: Os estudos aprovados para leitura integral serão submetidos a um Quality Assessment Checklist parametrizado no Parsifal.\n3. Extração (Data Extraction): Os dados serão mapeados em formulário próprio visando construir a Matriz de Mapeamento Comportamental (Taxonomia), que conectará a Cadeia Lógica: Qual Competência (SQ1) produz qual evidência/Dado (SQ2), que é processada por qual Método de IA (SQ4), sendo de quais tipos de aplicabilidade (SQ5)",
+  "shortPages": "0",
+  "sources": [
+    {
+      "custom": "",
+      "date": "",
+      "how": "api",
+      "id": "scopus",
+      "reported": "",
+      "role": "main"
+    },
+    {
+      "custom": "",
+      "date": "",
+      "how": "api",
+      "id": "ieee_xplore",
+      "reported": "",
+      "role": "main"
+    },
+    {
+      "custom": "",
+      "date": "",
+      "how": "manual",
+      "id": "acm_dl",
+      "reported": "",
+      "role": "main"
+    },
+    {
+      "custom": "",
+      "date": "",
+      "how": "manual",
+      "id": "web_of_science",
+      "reported": "",
+      "role": "comp"
+    },
+    {
+      "custom": "",
+      "date": "",
+      "how": "manual",
+      "id": "eric",
+      "reported": "",
+      "role": "comp"
+    }
+  ],
+  "sqs": [
+    {
+      "en": "What entrepreneurial competencies (knowledge, skills, and attitudes) are addressed in the studies?",
+      "id": "SQ1",
+      "label": "Competencies (CHA)",
+      "pt": "Quais competências empreendedoras (conhecimentos, habilidades e atitudes) são abordadas nos estudos?",
+      "codes": "Conhecimentos: knowledge; business knowledge; financial literacy\nCriatividade e inovação: creativity; innovation; idea generation\nIdentificação de oportunidades: opportunity recognition; opportunity identification\nResolução de problemas e decisão: problem solving; decision making\nComunicação e pitch: communication; pitch*; presentation skill*\nTrabalho em equipe e liderança: teamwork; collaboration; leadership\nAutoeficácia: self-efficacy; self efficacy\nIntenção empreendedora: entrepreneurial intention*\nAtitudes (risco, proatividade, resiliência): risk taking; risk-taking; proactiv*; resilience; mindset"
+    },
+    {
+      "en": "What evidence or observable indicators are used in entrepreneurship education?",
+      "id": "SQ2",
+      "label": "Observable Evidence / Indicators",
+      "pt": "Quais evidências ou indicadores observáveis são utilizados na educação empreendedora?",
+      "codes": "Desempenho em tarefas e avaliações: grade*; score*; performance; test result*\nPlanos de negócio e pitches: business plan*; business model canvas; pitch*\nTextos e reflexões: essay*; reflection*; written assignment*; journal*\nInterações e diálogos: interaction*; conversation*; dialogue*; chat*\nComportamento em jogos e simulações: simulation*; serious game*; game-based; gamif*\nAutorrelato: self-report*; questionnaire*; survey*; scale"
+    },
+    {
+      "en": "What data sources are extracted to capture this behavioral evidence?",
+      "id": "SQ3",
+      "label": "Data Sources",
+      "pt": "Quais fontes de dados são extraídas para capturar essas evidências comportamentais?",
+      "codes": "Logs de plataforma (LMS): log data; learning management system; LMS; clickstream; trace data\nQuestionários: questionnaire*; survey*\nTextos produzidos pelos alunos: essay*; text data; written\nTranscrições de chat com IA: chatbot log*; conversation log*; transcript*\nÁudio e vídeo: video*; audio; speech\nEntrevistas e grupos focais: interview*; focus group*\nSensores e biometria: eye tracking; eye-tracking; sensor*; physiological; EEG"
+    },
+    {
+      "en": "What Artificial Intelligence architectures, methods, and techniques are employed to process these data?",
+      "id": "SQ4",
+      "label": "AI Methods",
+      "pt": "Quais arquiteturas, métodos e técnicas de Inteligência Artificial são empregados para processar esses dados?",
+      "codes": "Aprendizado de máquina clássico: machine learning; random forest; support vector; SVM; decision tree*; logistic regression; clustering; k-means\nDeep learning: deep learning; neural network*; CNN; LSTM; transformer*\nPLN: natural language processing; NLP; text mining; sentiment analysis; topic model*\nLLM e IA generativa: large language model*; LLM*; ChatGPT; GPT*; generative AI; generative artificial intelligence\nAgentes inteligentes: AI agent*; intelligent agent*; agentic; multi-agent; conversational agent*; chatbot*\nSistemas adaptativos e tutores: adaptive learning; intelligent tutoring; recommender system*; recommendation system*"
+    },
+    {
+      "en": "For what educational applications are these AI methods used?",
+      "id": "SQ5",
+      "label": "Purpose",
+      "pt": "Para quais finalidades de aplicação educacional esses métodos de IA são utilizados?",
+      "codes": "Avaliação de competências: assessment; evaluat*; measur*\nFeedback automatizado: feedback\nPersonalização e adaptação: personaliz*; adaptive; tailored\nTutoria e mentoria: tutor*; mentor*; coach*\nPredição: predict*; forecast*\nSimulação e jogos: simulation*; serious game*; game-based\nGeração de conteúdo e ideias: content generation; idea generation; generat* ideas"
+    }
+  ],
+  "suspectTitles": true,
+  "title": "Artificial Intelligence Applied to Entrepreneurial Education: A Systematic Literature Review and Taxonomy",
+  "updatedAt": "2026-10-12T18:40:00.000Z",
+  "yearFrom": "",
+  "yearTo": ""
+}
