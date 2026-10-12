@@ -4,7 +4,11 @@ import { describe, expect, it } from "vitest";
 import { ieee } from "../lib/connectors/ieee";
 import { scopus } from "../lib/connectors/scopus";
 import { evalCriteria, suggestCodes, suggestDecision } from "../lib/criteria";
+import { migrateProtocol } from "../lib/defaults";
 import { computeFunnel } from "../lib/funnel";
+import { flowSVG } from "../lib/prisma-flow";
+import { docMD, docModel } from "../lib/protocol-doc";
+import { deriveFunnel, deriveScreening, kappa, prismaCounts, statusOf, type VoteMap } from "../lib/screening";
 import { parseFile } from "../lib/parsers";
 import { buildStrings, scopusQuery } from "../lib/protocol";
 import type { KeyedRecord, Protocol } from "../lib/types";
@@ -122,6 +126,32 @@ describe("conectores (API simulada)", () => {
     expect(p2.nextCursor).toBeNull();
   });
 
+  it("Scopus pagina por start quando a chave não tem assinatura", async () => {
+    const calls: string[] = [];
+    const fn = (async (url: string) => {
+      const u = decodeURIComponent(String(url));
+      calls.push(u);
+      if (u.includes("cursor=")) return new Response(JSON.stringify({ "service-error": { status: { statusCode: "INVALID_INPUT", statusText: "Exceeds the maximum number allowed for the service level" } } }), { status: 400 });
+      return new Response(JSON.stringify({ "search-results": { "opensearch:totalResults": "60", entry: [{ "dc:title": "T1", eid: "2-s2.0-" + u.match(/start=(\d+)/)![1] }] } }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const env = { ELSEVIER_API_KEY: "k" };
+    const p1 = await scopus.fetchPage(protocol, null, env, fn);
+    expect(p1.nextCursor).toBe("s:25");
+    expect(calls[1]).toContain("count=25");
+    expect(calls[1]).toContain("start=0");
+    // as páginas seguintes já vão por start, sem repetir a tentativa com cursor
+    const p2 = await scopus.fetchPage(protocol, "s:25", env, fn);
+    expect(calls).toHaveLength(3);
+    expect(calls[2]).toContain("start=25");
+    expect(p2.nextCursor).toBe("s:50");
+    expect((await scopus.fetchPage(protocol, "s:50", env, fn)).nextCursor).toBeNull(); // 60 resultados: acabou
+  });
+
+  it("Scopus explica o token institucional de outra chave", async () => {
+    const fn = (async () => new Response(JSON.stringify({ "service-error": { status: { statusCode: "AUTHENTICATION_ERROR", statusText: "Institution Token is not associated with API Key" } } }), { status: 401 })) as unknown as typeof fetch;
+    await expect(scopus.fetchPage(protocol, null, { ELSEVIER_API_KEY: "k", ELSEVIER_INST_TOKEN: "t" }, fn)).rejects.toThrow("não pertence a esta chave");
+  });
+
   it("IEEE faz uma busca por tipo de conteúdo", async () => {
     const art = { title: "A", publication_year: 2022, content_type: "Journals", authors: { authors: [{ full_name: "X Y" }] }, index_terms: { author_terms: { terms: ["k1", "k2"] } } };
     const { fn, calls } = fakeFetch([{ total_records: 1, articles: [art] }, { total_records: 1, articles: [{ ...art, content_type: "Conferences" }] }]);
@@ -137,5 +167,44 @@ describe("conectores (API simulada)", () => {
 
   it("explica a falta de chave", async () => {
     await expect(scopus.fetchPage(protocol, null, {})).rejects.toThrow("ELSEVIER_API_KEY");
+  });
+});
+
+describe("triagem, PRISMA e documento", () => {
+  const recs: KeyedRecord[] = ["a", "b", "c", "d"].map((k) => ({ key: k, source: "scopus", title: "Estudo " + k, year: 2020, abstract: "x" }));
+  const p: Protocol = { ...protocol, yearFrom: "", yearTo: "", ic: [], ec: [{ c: "EC1", t: "Fora do tema" }], reviewers: "2" };
+  const f = deriveFunnel(recs, p);
+  const votes: VoteMap = {
+    ta: { r1: { a: { d: "inc" }, b: { d: "exc", r: "EC1" }, c: { d: "may" }, d: { d: "inc" } }, r2: { a: { d: "may" }, b: { d: "exc" }, c: { d: "exc" } } },
+    ft: { r1: { a: { d: "exc", r: "EC1" } }, r2: { a: { d: "exc", r: "EC1" } } },
+  };
+  const ctx = { votes, cons: { ta: {}, ft: {} }, mode: 2 as const, revIds: ["r1", "r2"] };
+
+  it("combina os dois votos por etapa", () => {
+    expect(statusOf("a", "ta", ctx).s).toBe("inc"); // incluir + talvez segue adiante
+    expect(statusOf("b", "ta", ctx)).toMatchObject({ s: "exc", r: "EC1" });
+    expect(statusOf("c", "ta", ctx).s).toBe("conf");
+    expect(statusOf("d", "ta", ctx).s).toBe("pend"); // só um revisor votou
+    expect(statusOf("c", "ta", { ...ctx, cons: { ta: { c: { d: "inc" } }, ft: {} } })).toMatchObject({ s: "inc", by: "consenso" });
+    expect(statusOf("c", "ta", { ...ctx, mode: 1, revIds: ["r1"] }).s).toBe("inc");
+  });
+  it("conta o fluxograma a partir das decisões", () => {
+    const c = prismaCounts(f, deriveScreening(f, ctx));
+    expect(c).toMatchObject({ total: 4, screened: 4, taExc: 1, taPend: 2, sought: 1, assessed: 1, ftExcN: 1, inc: 0, reasons: { EC1: 1 } });
+    expect(flowSVG(c, p, true)).toContain("Registros triados (n = 4)");
+  });
+  it("calcula o kappa de Cohen", () => {
+    expect(kappa([[true, true], [false, false]])).toBeNull(); // poucos pares
+    expect(kappa([[true, true], [true, true], [false, false], [false, false], [true, false], [false, true]])).toBeCloseTo(1 / 3);
+  });
+  it("monta o documento do protocolo e completa protocolos antigos", () => {
+    const md = docMD(docModel(protocol));
+    expect(md).toContain("# Protocolo de Revisão da Literatura");
+    expect(md).toContain("## 4. Critérios de Elegibilidade");
+    expect(buildStrings(protocol, true).at(-1)?.id).toBe("generic");
+    const old = migrateProtocol({ question: "Q?", objectives: "O" } as never);
+    expect(old.gq?.en).toBe("Q?");
+    expect(old.objective).toBe("O");
+    expect(old.blind).toBe(true);
   });
 });

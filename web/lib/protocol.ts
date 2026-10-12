@@ -25,6 +25,12 @@ export function fieldList(p: Protocol): Field[] {
   return l.length ? l : ["title", "abstract", "keywords"];
 }
 
+export function fieldsLabel(p: Protocol): string {
+  const n: Record<Field, string> = { title: "Título", abstract: "Resumo", keywords: "Palavras-chave" };
+  const l = fieldList(p).map((k) => n[k]);
+  return l.length > 1 ? l.slice(0, -1).join(", ") + " e " + l[l.length - 1] : l[0];
+}
+
 export function languages(p: Protocol): string[] {
   return (p.langs ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
@@ -88,7 +94,8 @@ export function genericString(B: string[][]): string {
   return B.map((b) => "( " + b.map(quote).join(" OR ") + " )").join(" AND ");
 }
 
-export function buildStrings(p: Protocol): BuiltString[] {
+/** `withGeneric` acrescenta a string conceitual (sem sintaxe de base), exibida na aba Protocolo. */
+export function buildStrings(p: Protocol, withGeneric = false): BuiltString[] {
   const B = blocksOf(p);
   if (!B.length) return [];
   const fs = fieldList(p);
@@ -102,6 +109,7 @@ export function buildStrings(p: Protocol): BuiltString[] {
     const custom = (src.custom ?? "").trim();
     out.push({ id: src.id, label: SOURCE_LABELS[src.id as keyof typeof SOURCE_LABELS] ?? src.id, role: src.role ?? "main", auto: r.s, s: custom || r.s, custom: !!custom, notes: r.notes });
   }
+  if (withGeneric) out.push({ id: "generic", label: "Genérica", role: "ref", auto: genericString(B), s: genericString(B), custom: false, notes: ["Estrutura conceitual, igual à tabela do documento."] });
   return out;
 }
 

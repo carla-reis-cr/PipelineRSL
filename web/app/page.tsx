@@ -17,7 +17,7 @@ export default async function Home() {
               <tr key={p.id}><td><Link href={`/projects/${p.id}`}>{p.title || "(sem título)"}</Link></td><td className="mono">{new Date(p.updated_at).toLocaleString("pt-BR")}</td></tr>
             ))}
           </tbody></table>
-        ) : <p className="muted">Nenhuma revisão ainda. Crie a primeira com o protocolo.json exportado da Bancada.</p>}
+        ) : <p className="muted">Nenhuma revisão ainda. Crie a primeira abaixo.</p>}
       </div>
       <NewProject />
     </main>
