@@ -1,0 +1,2010 @@
+<title>Bancada PRISMA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: barra do projeto + abas por fase PRISMA; cada aba é uma bancada de trabalho (formulário, fila de triagem, fluxograma) */
+:root{
+  --bg:#F3F6F6; --surface:#FFFFFF; --sunken:#E8EEEE; --line:#D3DCDC; --line-strong:#B7C5C6;
+  --ink:#13252A; --muted:#55686D; --accent:#1C6670; --accent-ink:#FFFFFF; --accent-soft:#DCEDEE;
+  --ok:#2C7A4E; --ok-soft:#E1F1E7; --warn:#9A6514; --warn-soft:#F7ECD7; --stop:#9C3445; --stop-soft:#F6E1E4;
+  --hl1:#FCE9A8; --hl2:#CDE8F6; --hl3:#E3D9F5; --hl4:#D6F0DA;
+  --f-display:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1A1C; --surface:#162427; --sunken:#1C2E31; --line:#2A3F43; --line-strong:#3D5559;
+  --ink:#E4EEEE; --muted:#9AB0B3; --accent:#6FC2CB; --accent-ink:#0F1A1C; --accent-soft:#1D3A3E;
+  --ok:#7FCB9C; --ok-soft:#1A3527; --warn:#E3B566; --warn-soft:#3A2E17; --stop:#EE8D9C; --stop-soft:#3D1E24;
+  --hl1:#5A4A12; --hl2:#163F55; --hl3:#3A2D5A; --hl4:#1F4A2A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1A1C; --surface:#162427; --sunken:#1C2E31; --line:#2A3F43; --line-strong:#3D5559;
+  --ink:#E4EEEE; --muted:#9AB0B3; --accent:#6FC2CB; --accent-ink:#0F1A1C; --accent-soft:#1D3A3E;
+  --ok:#7FCB9C; --ok-soft:#1A3527; --warn:#E3B566; --warn-soft:#3A2E17; --stop:#EE8D9C; --stop-soft:#3D1E24;
+  --hl1:#5A4A12; --hl2:#163F55; --hl3:#3A2D5A; --hl4:#1F4A2A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:22px 72px;display:flex;flex-direction:column;gap:18px}
+h1,h2{font-family:var(--f-display);font-weight:600;text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(1.5rem,3vw,2rem)}
+h2{font-size:1.35rem}
+h3{font-size:.95rem;font-weight:600;margin:0}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=text],input[type=number],input[type=date],input[type=search],textarea,select{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 9px;width:100%;color:var(--ink);font-size:.92rem;min-width:0}
+textarea{resize:vertical;min-height:60px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:var(--muted);font-weight:500;min-width:0}
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:4px;padding:7px 13px;font-weight:500;font-size:.88rem;white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--accent);border-color:var(--line-strong)}
+.btn.small{padding:4px 9px;font-size:.8rem}
+.btn.danger{background:transparent;color:var(--stop);border-color:var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+.link{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;font-size:.85rem}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+
+/* topo */
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+.top .id{display:flex;flex-direction:column;gap:4px;min-width:0}
+.top .id .sub{color:var(--muted);font-size:.9rem;max-width:70ch}
+.status{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:.78rem;color:var(--muted)}
+.save{font-family:var(--f-mono);display:flex;align-items:center;gap:6px}
+.save i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.save.ok i{background:var(--ok)} .save.busy i{background:var(--warn)} .save.err i{background:var(--stop)}
+.me{font-size:.8rem}
+.me b{color:var(--ink);font-weight:500}
+
+/* fases */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 13px;color:var(--muted);font-weight:500;white-space:nowrap;display:flex;gap:7px;align-items:baseline}
+.tabs button .n{font-family:var(--f-mono);font-size:.7rem}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs .badge{font-family:var(--f-mono);font-size:.68rem;background:var(--sunken);border-radius:999px;padding:0 7px}
+.tabs .badge.warn{background:var(--warn-soft);color:var(--warn)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel > header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.panel > header p{color:var(--muted);font-size:.88rem;max-width:70ch}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:18px;min-width:0}
+.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 10px)}
+
+/* protocolo */
+.blocks{display:flex;flex-direction:column;gap:10px}
+.block{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start}
+.block .sw{width:28px;height:28px;border-radius:4px;display:grid;place-items:center;font-family:var(--f-mono);font-size:.75rem;font-weight:500;color:var(--ink)}
+.block .body{display:flex;flex-direction:column;gap:6px;min-width:0}
+.and{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);padding-left:38px}
+.crit{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:8px;align-items:start}
+.crit input.code{font-family:var(--f-mono)}
+.src{display:grid;grid-template-columns:minmax(140px,1.3fr) minmax(110px,.9fr) minmax(120px,.9fr) minmax(90px,.7fr) auto;gap:8px;align-items:end}
+.src-head{font-size:.72rem;color:var(--muted)}
+.strings{display:flex;flex-direction:column;gap:10px}
+.string{border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.string .h{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--sunken);padding:5px 10px;font-size:.78rem;font-weight:600}
+.string pre{margin:0;padding:10px;font-family:var(--f-mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;max-height:180px;overflow:auto}
+.note{font-size:.8rem;color:var(--muted)}
+.callout{border-left:3px solid var(--accent);background:var(--accent-soft);padding:10px 12px;border-radius:0 4px 4px 0;font-size:.86rem}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+.callout.stop{border-color:var(--stop);background:var(--stop-soft)}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.88rem}
+.check input{margin-top:4px;accent-color:var(--accent)}
+
+/* importação */
+.drop{border:1.5px dashed var(--line-strong);border-radius:var(--r);padding:26px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;background:var(--bg)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop .fmt{font-family:var(--f-mono);font-size:.75rem;color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th{text-align:left;font-family:var(--f-mono);font-weight:500;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--sunken);padding:8px 10px;white-space:nowrap}
+td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+tfoot td{font-weight:600}
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:22px;text-align:center;color:var(--muted);font-size:.9rem}
+.empty b{display:block;color:var(--ink);font-weight:500;margin-bottom:4px}
+
+/* triagem */
+.team{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.slot{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.slot .who{display:flex;flex-direction:column;min-width:0}
+.slot .who small{font-family:var(--f-mono);font-size:.7rem;color:var(--muted)}
+.slot.mine{border-color:var(--accent)}
+.stats{display:flex;flex-wrap:wrap;gap:6px}
+.stat{display:flex;align-items:baseline;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:.8rem;background:var(--surface)}
+.stat b{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.stat.ok{color:var(--ok);background:var(--ok-soft);border-color:transparent}
+.stat.stop{color:var(--stop);background:var(--stop-soft);border-color:transparent}
+.stat.warn{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.bar{height:6px;background:var(--sunken);border-radius:3px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent);transition:width .3s}
+.qbar{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr) auto;gap:10px;align-items:center}
+.card{border:1px solid var(--line-strong);border-radius:var(--r);padding:20px 22px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
+.card .meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted)}
+.card .meta .src{display:inline;font-family:var(--f-mono)}
+.card h2.t{font-size:1.3rem;line-height:1.3}
+.card .au{font-size:.85rem;color:var(--muted)}
+.card .ab{font-size:.95rem;line-height:1.65;max-width:78ch}
+.card .ab.none{color:var(--muted);font-style:italic}
+mark{color:inherit;border-radius:2px;padding:0 1px}
+mark.b0{background:var(--hl1)} mark.b1{background:var(--hl2)} mark.b2{background:var(--hl3)} mark.b3{background:var(--hl4)}
+.decide{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
+.dbtn{border:1px solid var(--line-strong);background:var(--surface);border-radius:4px;padding:8px 14px;font-weight:500;display:flex;gap:8px;align-items:center}
+.dbtn kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--muted)}
+.dbtn.inc[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.dbtn.may[aria-pressed="true"]{background:var(--warn);border-color:var(--warn);color:var(--surface)}
+.dbtn.exc[aria-pressed="true"],.dbtn.nr[aria-pressed="true"]{background:var(--stop);border-color:var(--stop);color:var(--surface)}
+.dbtn[aria-pressed="true"] kbd{color:inherit;border-color:currentColor}
+.decide select{width:auto;max-width:280px}
+.votes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.vote{border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-size:.84rem;display:flex;flex-direction:column;gap:2px}
+.vote .lbl{font-family:var(--f-mono);font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:.74rem;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.pill.inc{color:var(--ok);background:var(--ok-soft)} .pill.may{color:var(--warn);background:var(--warn-soft)}
+.pill.exc,.pill.nr,.pill.conf{color:var(--stop);background:var(--stop-soft)} .pill.pend{color:var(--muted);background:var(--sunken)}
+.nav{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.kbdhint{font-size:.75rem;color:var(--muted)}
+.ai-box{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);max-height:540px;overflow:auto}
+.li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:9px 12px;border-top:1px solid var(--line);background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;align-items:center}
+.li:first-child{border-top:0}
+.li:hover{background:var(--sunken)}
+.li[aria-current="true"]{background:var(--accent-soft)}
+.li .lt{font-size:.86rem;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.li .lm{font-family:var(--f-mono);font-size:.7rem;color:var(--muted)}
+.ftlay{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+
+/* prisma */
+.flow{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:10px}
+.flow svg{display:block;margin:0 auto;max-width:none}
+.flow .bx{fill:var(--surface);stroke:var(--line-strong)}
+.flow .bx.side{fill:var(--bg)}
+.flow .phase{fill:var(--accent-soft);stroke:none}
+.flow .phase-t{fill:var(--accent);font-family:var(--f-mono);font-size:11px;letter-spacing:.08em}
+.flow text{fill:var(--ink);font-family:var(--f-body);font-size:12.5px}
+.flow text.h{font-weight:600}
+.flow .ar{stroke:var(--muted);fill:none;stroke-width:1.2}
+.flow .arh{fill:var(--muted)}
+
+.metric{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.m{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.m b{font-family:var(--f-mono);font-size:1.35rem;font-weight:500;font-variant-numeric:tabular-nums}
+.m span{font-size:.78rem;color:var(--muted)}
+.decl{font-family:var(--f-display);font-size:1.04rem;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;white-space:pre-wrap;max-width:80ch}
+
+.modal{position:fixed;inset:0;background:rgba(10,20,22,.55);display:grid;place-items:center;padding:16px;z-index:20}
+.modal .in{background:var(--surface);border-radius:var(--r);border:1px solid var(--line);max-width:760px;width:100%;max-height:86vh;display:flex;flex-direction:column;gap:10px;padding:18px}
+.modal textarea{flex:1;min-height:320px;font-family:var(--f-mono);font-size:.78rem}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:4px;font-size:.86rem;z-index:30;max-width:90vw}
+.foot{font-size:.78rem;color:var(--muted);max-width:90ch}
+
+
+.seg{display:flex;gap:0;align-items:center;flex-wrap:wrap}
+.seg button{border:1px solid var(--line-strong);background:var(--surface);padding:6px 14px;font-weight:500;font-size:.88rem;color:var(--muted)}
+.seg button:first-child{border-radius:4px 0 0 4px}.seg button:nth-child(2){border-radius:0 4px 4px 0;border-left:0}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg .note{margin-left:12px}
+.rq{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:start;border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.rq.gq{border-color:var(--accent);background:var(--accent-soft)}
+.rq-id{font-family:var(--f-mono);font-weight:500;font-size:1rem;color:var(--accent);padding-top:22px}
+.rq-id input{font-family:var(--f-mono);font-weight:500;color:var(--accent);text-align:center}
+.rq-body{display:flex;flex-direction:column;gap:8px;min-width:0}
+.fs{border:1px solid var(--line);border-radius:4px;padding:8px 12px 10px;display:flex;flex-direction:column;gap:4px;margin:0;min-width:0}
+.fs legend{font-size:.78rem;color:var(--muted);font-weight:500;padding:0 4px}
+.strta{border:0;border-radius:0;font-family:var(--f-mono);font-size:.75rem;background:var(--surface)}
+.sheet{background:#FFFFFF;color:#1A1A1A;max-width:820px;margin:0 auto;padding:56px 64px;border:1px solid var(--line);border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;font-size:14.5px;line-height:1.55}
+.sheet h1{font-family:inherit;font-size:1.25rem;font-weight:700;margin:0 0 22px}
+.sheet h2{font-family:inherit;font-size:1rem;font-weight:700;margin:26px 0 10px}
+.sheet h3{font-size:.95rem;font-weight:700;margin:18px 0 8px}
+.sheet p{margin:0 0 10px;text-align:justify}
+.sheet p.small{font-size:.8rem;color:#555;font-style:italic;text-align:left}
+.sheet p.meta{font-size:.8rem;color:#777;font-style:italic;margin-top:30px}
+.sheet pre{font-family:"Courier New",monospace;font-size:.78rem;background:#F2F2F2;border:1px solid #CCC;padding:8px 10px;white-space:pre-wrap;word-break:break-word;margin:0 0 6px}
+.sheet ul,.sheet ol{margin:0 0 10px;padding-left:26px}
+.sheet ul ul{list-style:circle;margin:4px 0}
+.sheet li{margin-bottom:4px}
+.sheet .tw{overflow-x:auto;margin:0 0 14px}
+.sheet table{border-collapse:collapse;width:100%;min-width:480px;font-size:.92rem}
+.sheet th{background:none;color:#1A1A1A;font-family:inherit;font-size:.92rem;text-transform:none;letter-spacing:0;font-weight:700;border:1px solid #000;padding:6px 8px}
+.sheet td{border:1px solid #000;padding:6px 8px;vertical-align:top}
+.sheet td p{margin:0 0 2px;text-align:left}
+.src{grid-template-columns:minmax(130px,1.2fr) minmax(105px,.8fr) minmax(105px,.8fr) minmax(120px,.9fr) minmax(80px,.6fr) auto}
+@media (max-width:640px){.sheet{padding:24px 18px}.rq{grid-template-columns:1fr}.rq-id{padding-top:0}}
+
+.crit-wrap{display:flex;flex-direction:column;gap:4px}
+.rule{margin-left:78px;font-size:.82rem}
+.rule summary{cursor:pointer;color:var(--muted)}
+.rule summary b{color:var(--ink);font-weight:500}
+.rule .rstat{font-family:var(--f-mono);font-size:.72rem}
+.rule-body{display:flex;flex-direction:column;gap:8px;padding:8px 0 4px;border-left:2px solid var(--line);padding-left:12px;margin-top:6px}
+.crit-check{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.cgroup{display:flex;flex-direction:column;gap:2px}
+.crow{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.crow:first-of-type{border-top:0}
+.ccode{font-weight:500;padding-top:2px}
+.crow.done .ccode{color:var(--accent)}
+.cbody{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ctext{font-size:.88rem}
+.cauto{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;font-size:.8rem}
+.ev{color:var(--muted);font-size:.78rem;overflow-wrap:anywhere}
+.cbtns{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.cbtn{border:1px solid var(--line-strong);background:var(--surface);border-radius:4px;padding:4px 9px;font-size:.78rem;font-weight:500;white-space:nowrap}
+.cbtn.hint{border-style:dashed;border-color:currentColor}
+.cbtn.good.hint{color:var(--ok)}.cbtn.bad.hint{color:var(--stop)}
+.cbtn.good[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.cbtn.bad[aria-pressed="true"]{background:var(--stop);border-color:var(--stop);color:var(--surface)}
+.cbtn.unk[aria-pressed="true"]{background:var(--warn);border-color:var(--warn);color:var(--surface)}
+.cbtn:disabled{opacity:.5;cursor:default}
+.decide .sep{flex:0 0 1px;align-self:stretch;background:var(--line)}
+kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--muted)}
+.btn kbd{color:inherit;border-color:currentColor;opacity:.8}
+.bulk{display:flex;flex-direction:column}
+.bulk-row{display:grid;grid-template-columns:52px minmax(0,1fr) 70px auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.bulk-row:first-child{border-top:0}
+.bulk-row .bt{display:flex;flex-direction:column;font-size:.86rem;min-width:0}
+.bulk-row .bt small{color:var(--muted);font-size:.75rem}
+.bulk-row b{text-align:right}
+.qlist .list{max-height:720px}
+.exsec{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.exsec header{display:flex;gap:8px;align-items:baseline}
+.exsec header .mono{color:var(--accent);font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 4px 2px 10px;font-size:.8rem;font-weight:500}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip button{border:0;background:none;color:inherit;font-size:.9rem;padding:0 6px;line-height:1}
+.sugg{display:flex;flex-direction:column;gap:6px}
+.sg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;border:1px dashed var(--line-strong);border-radius:4px;padding:8px 10px}
+.sg > div{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:.86rem}
+.freqs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.freq{display:flex;flex-direction:column;gap:6px}
+.fr{display:grid;grid-template-columns:minmax(0,1fr) 90px 28px;gap:8px;align-items:center;font-size:.84rem}
+.fbar{height:6px;background:var(--sunken);border-radius:3px;overflow:hidden}
+.fbar span{display:block;height:100%;background:var(--accent)}
+.fr b{text-align:right;font-weight:500}
+table.cross td,table.cross th{white-space:nowrap}
+details > summary{cursor:pointer}
+@media (max-width:640px){.rule{margin-left:0}.crow{grid-template-columns:40px minmax(0,1fr)}.cbtns{grid-column:1/-1;justify-content:flex-start}.bulk-row{grid-template-columns:44px minmax(0,1fr) auto}.bulk-row button{grid-column:1/-1}}
+@media (max-width:980px){
+  .cols,.ftlay{grid-template-columns:1fr}
+  .sticky{position:static}
+}
+@media (max-width:640px){
+  .panel{padding:14px}
+  .src{grid-template-columns:1fr 1fr}
+  .src-head{display:none}
+  .crit{grid-template-columns:60px minmax(0,1fr) auto}
+  .qbar{grid-template-columns:1fr}
+  .card{padding:14px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="id">
+      <span class="eyebrow">Protocolo · busca · triagem · PRISMA 2020</span>
+      <h1 id="proj-title">Bancada PRISMA</h1>
+      <p class="sub" id="proj-sub">Monte o protocolo, importe as exportações das bases ou do seu pipeline, faça a triagem em dupla e gere o fluxograma PRISMA 2020 com os números reais.</p>
+    </div>
+    <div class="status">
+      <div class="save" id="save" aria-live="polite"><i></i><span>Conectando…</span></div>
+      <div class="me" id="me"></div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-v="protocolo" aria-selected="true"><span class="n">01</span>Protocolo</button>
+    <button role="tab" data-v="importar" aria-selected="false"><span class="n">02</span>Busca e importação <span class="badge" id="b-imp">0</span></button>
+    <button role="tab" data-v="ta" aria-selected="false"><span class="n">03</span>Triagem título/resumo <span class="badge" id="b-ta">0</span></button>
+    <button role="tab" data-v="ft" aria-selected="false"><span class="n">04</span>Elegibilidade <span class="badge" id="b-ft">0</span></button>
+    <button role="tab" data-v="ex" aria-selected="false"><span class="n">05</span>Extração <span class="badge" id="b-ex">0</span></button>
+    <button role="tab" data-v="prisma" aria-selected="false"><span class="n">06</span>Fluxograma PRISMA</button>
+    <button role="tab" data-v="ia" aria-selected="false"><span class="n">07</span>Uso de IA</button>
+  </nav>
+
+  <!-- 01 PROTOCOLO -->
+  <section id="v-protocolo" class="stack">
+    <div class="seg" role="group" aria-label="Modo do protocolo">
+      <button id="pm-edit" aria-pressed="true">Editar</button>
+      <button id="pm-doc" aria-pressed="false">Ver documento</button>
+      <span class="note" id="p-updated"></span>
+    </div>
+
+    <div class="cols" id="proto-edit">
+    <div class="stack" id="proto-form">
+      <div class="panel">
+        <header><h2>Identificação e objetivo</h2></header>
+        <label class="f">Título da revisão<input type="text" id="p-title" data-path="title" placeholder="Ex.: Artificial Intelligence Applied to Entrepreneurial Education: A Systematic Literature Review"></label>
+        <label class="f">Objetivo<textarea id="p-objective" data-path="objective" rows="3" placeholder="O objetivo desta revisão é mapear como…"></textarea></label>
+        <label class="f">Lógica da revisão (opcional, aparece em destaque no documento)<input type="text" id="p-logic" data-path="logic" placeholder="Ex.: Competência → Evidências → Fontes de Dados → Método de IA → Finalidade"></label>
+      </div>
+
+      <div class="panel">
+        <header><h2>Questões de pesquisa</h2><p>A questão geral orienta a busca e a triagem; as secundárias viram as colunas da extração de dados.</p></header>
+        <label class="f">Frase de abertura da tabela<input type="text" id="p-rqintro" data-path="rqIntro"></label>
+        <div class="rq gq">
+          <div class="rq-id">GQ</div>
+          <div class="rq-body">
+            <label class="f">Rótulo<input type="text" id="gq-label" data-path="gq.label" placeholder="General Question"></label>
+            <label class="f">Questão (inglês)<textarea id="gq-en" data-path="gq.en" rows="2" placeholder="How has … been applied in …?"></textarea></label>
+            <label class="f">Questão (português)<textarea id="gq-pt" data-path="gq.pt" rows="2" placeholder="Como … tem sido aplicada em …?"></textarea></label>
+          </div>
+        </div>
+        <div class="stack" style="gap:10px" id="sqs"></div>
+        <div class="row"><button class="btn ghost small" data-add="sqs">Adicionar questão secundária</button></div>
+      </div>
+
+      <div class="panel">
+        <header><h2>Estratégia de busca</h2><p>Cada bloco é um termo principal com seus termos alternativos (OR). Os blocos se combinam com AND. Use * para truncar, como em <span class="mono">competenc*</span>.</p></header>
+        <label class="f">Texto de apresentação da string<textarea id="p-searchintro" data-path="searchIntro" rows="2"></textarea></label>
+        <div class="blocks" id="blocks"></div>
+        <div class="row"><button class="btn ghost small" data-add="blocks">Adicionar bloco</button></div>
+        <div class="grid2">
+          <fieldset class="fs"><legend>Campos de busca</legend>
+            <label class="check"><input type="checkbox" id="fd-t" data-path="fields.title"><span>Título</span></label>
+            <label class="check"><input type="checkbox" id="fd-a" data-path="fields.abstract"><span>Resumo</span></label>
+            <label class="check"><input type="checkbox" id="fd-k" data-path="fields.keywords"><span>Palavras-chave</span></label>
+          </fieldset>
+          <fieldset class="fs"><legend>Tipos de documento</legend>
+            <label class="check"><input type="checkbox" id="dt-j" data-path="docTypes.journal"><span>Artigos de periódico</span></label>
+            <label class="check"><input type="checkbox" id="dt-c" data-path="docTypes.conference"><span>Artigos de conferência</span></label>
+          </fieldset>
+        </div>
+        <label class="f">Justificativa dos tipos de documento<textarea id="p-dtt" data-path="docTypesText" rows="2"></textarea></label>
+        <div class="grid2">
+          <label class="f">Ano inicial (vazio = sem limite)<input type="number" id="p-yfrom" data-path="yearFrom" placeholder="Ex.: 2016"></label>
+          <label class="f">Ano final (vazio = até a data da busca)<input type="number" id="p-yto" data-path="yearTo"></label>
+          <label class="f">Idiomas aceitos<input type="text" id="p-langs" data-path="langs" placeholder="English"></label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <header><h2>Critérios de elegibilidade</h2><p>Os códigos EC viram os motivos de exclusão na triagem e no fluxograma.</p></header>
+        <h3>Inclusão</h3><div class="stack" style="gap:8px" id="ic"></div>
+        <div class="row"><button class="btn ghost small" data-add="ic">Adicionar critério de inclusão</button></div>
+        <h3>Exclusão</h3><div class="stack" style="gap:8px" id="ec"></div>
+        <div class="row"><button class="btn ghost small" data-add="ec">Adicionar critério de exclusão</button></div>
+      </div>
+
+      <div class="panel">
+        <header><h2>Fontes de informação</h2><p>Bases principais entram na busca; complementares servem, por exemplo, para medir sobreposição. O identificador é o mesmo <span class="mono">source_db</span> do pipeline.</p></header>
+        <div class="src src-head"><span>Base</span><span>Papel</span><span>Acesso</span><span>Data da busca</span><span>Total</span><span></span></div>
+        <div class="stack" style="gap:8px" id="sources"></div>
+        <div class="row"><button class="btn ghost small" data-add="sources">Adicionar base</button></div>
+        <label class="f">Finalidade das bases complementares<input type="text" id="p-comp" data-path="compPurpose" placeholder="Ex.: para avaliar o índice de sobreposição"></label>
+      </div>
+
+      <div class="panel">
+        <header><h2>Seleção, qualidade e extração</h2><p>Uma etapa por linha. Linhas que começam com número viram lista numerada no documento.</p></header>
+        <textarea id="p-sel" data-path="selection" rows="8"></textarea>
+      </div>
+
+      <div class="panel">
+        <header><h2>Filtros automáticos e equipe</h2><p>Aplicados antes da triagem, com as mesmas regras do pipeline (etapas 02, 03, 05, 14 e 15). Aparecem no fluxograma como removidos por ferramenta automática.</p></header>
+        <label class="f">Tipos de documento excluídos automaticamente (separados por vírgula)<textarea id="p-types" data-path="excludedTypes"></textarea></label>
+        <div class="grid2">
+          <label class="check"><input type="checkbox" id="p-suspect" data-path="suspectTitles"><span>Excluir títulos de errata, editorial, prefácio, índice e similares</span></label>
+          <label class="check"><input type="checkbox" id="p-langf" data-path="langFilter"><span>Excluir idioma fora da lista (quando a base informa o idioma)</span></label>
+          <label class="f">Excluir artigos com até N páginas (0 desliga)<input type="number" id="p-short" data-path="shortPages" min="0"></label>
+        </div>
+        <div class="grid2">
+          <label class="f">Revisores na triagem<select id="p-mode" data-path="reviewers"><option value="2">Dois revisores independentes</option><option value="1">Um revisor</option></select></label>
+          <label class="check"><input type="checkbox" id="p-blind" data-path="blind"><span>Triagem cega: a decisão do outro revisor só aparece depois que os dois votaram</span></label>
+        </div>
+      </div>
+    </div>
+
+    <aside class="stack sticky">
+      <div class="panel">
+        <header><h2>String por base</h2></header>
+        <p class="note">Montada a partir dos blocos, dos campos, dos anos, do idioma e dos tipos de documento, na sintaxe de cada base. Para ajustar uma delas à mão, use Editar.</p>
+        <div class="strings" id="strings"></div>
+      </div>
+      <div class="panel">
+        <header><h2>Documento e pipeline</h2></header>
+        <div class="row">
+          <button class="btn" id="exp-docx">Baixar protocolo (.docx)</button>
+          <button class="btn ghost" id="exp-proto">Markdown</button>
+        </div>
+        <p class="note">Salve o <span class="mono">protocolo.json</span> na raiz do PipelineRSL. Os conectores do Scopus e do IEEE e o relatório de critérios passam a seguir este protocolo. Depois importe aqui os arquivos <span class="mono">*_bancada.csv</span> que eles gerarem.</p>
+        <div class="row">
+          <button class="btn" id="exp-pjson">protocolo.json</button>
+          <button class="btn ghost" id="exp-config">config.py</button>
+          <button class="btn ghost" id="exp-counts">initial_search_counts.json</button>
+        </div>
+        <div class="callout warn" id="ex-box">Ainda sem protocolo? <button class="link" id="load-example">Carregar o protocolo do repositório LiteraturaReviewPipeline</button> como exemplo.</div>
+      </div>
+    </aside>
+    </div>
+
+    <div id="proto-doc" hidden>
+      <div class="row" style="justify-content:flex-end;margin-bottom:12px">
+        <button class="btn" id="exp-docx2">Baixar Word (.docx)</button>
+        <button class="btn ghost" id="exp-proto2">Markdown</button>
+        <button class="btn ghost" id="copy-doc">Copiar texto</button>
+      </div>
+      <article class="sheet" id="sheet"></article>
+    </div>
+  </section>
+
+  <!-- 02 IMPORTAR -->
+  <section id="v-importar" class="stack" hidden>
+    <div class="panel">
+      <header><h2>Importar registros</h2><p>Exporte os resultados de cada base e solte os arquivos aqui. Também aceita os CSVs do pipeline (<span class="mono">raw_pool_no_dedup.csv</span>, <span class="mono">after_language_filter.csv</span> e outros com a coluna <span class="mono">source_db</span>).</p></header>
+      <div class="drop" id="drop">
+        <b>Solte os arquivos aqui</b>
+        <span class="fmt">BibTeX (.bib) · RIS (.ris) · CSV do Scopus · texto ou TSV do Web of Science · CSV do pipeline · Publish or Perish</span>
+        <label class="btn ghost small" for="file">Escolher arquivos</label>
+        <input type="file" id="file" multiple accept=".bib,.ris,.csv,.txt,.tsv,.nbib" hidden>
+      </div>
+      <div id="staged"></div>
+      <div class="callout">Como exportar: <b>Scopus</b> Export → CSV com "Citation information" e "Abstract & keywords". <b>Web of Science</b> Export → Plain text file ou Tab delimited, "Full Record". <b>ACM DL</b> selecione todos → Export Citations → BibTeX. Cada base tem limite por exportação (Scopus 20.000 em CSV, WoS 1.000 por vez), então divida em lotes e importe todos para a mesma base.</div>
+    </div>
+    <div class="panel">
+      <header><h2>Registros por base</h2><p>Compare o total importado com o total que a base informou. Diferenças indicam exportação incompleta.</p></header>
+      <div id="per-base"></div>
+      <h3>Arquivos importados</h3>
+      <div id="imports"></div>
+    </div>
+  </section>
+
+  <!-- 03 TRIAGEM T/R -->
+  <section id="v-ta" class="stack" hidden></section>
+  <!-- 04 TEXTO COMPLETO -->
+  <section id="v-ft" class="stack" hidden></section>
+
+  <!-- 05 EXTRAÇÃO -->
+  <section id="v-ex" class="stack" hidden></section>
+
+  <!-- 06 PRISMA -->
+  <section id="v-prisma" class="stack" hidden>
+    <div class="panel">
+      <header><h2>Fluxograma PRISMA 2020</h2><p>Atualizado a cada decisão. Para revisões novas, modelo com bases de dados e registros.</p></header>
+      <div id="flow-warn"></div>
+      <div class="flow" id="flow"></div>
+      <div class="row">
+        <button class="btn" id="exp-svg">Baixar fluxograma (SVG)</button>
+        <button class="btn ghost" id="exp-inc">Estudos incluídos (CSV)</button>
+        <button class="btn ghost" id="exp-all">Todas as decisões (CSV)</button>
+      </div>
+    </div>
+    <div class="panel">
+      <header><h2>Funil por base</h2><p>Equivalente ao relatório <span class="mono">report_per_base_funnel.py</span>. Registros duplicados contam para a base em que apareceram primeiro.</p></header>
+      <div id="funnel"></div>
+    </div>
+  </section>
+
+  <!-- 06 IA -->
+  <section id="v-ia" class="stack" hidden>
+    <div class="panel">
+      <header><h2>Concordância</h2><p>Números para relatar na seção de métodos. A IA é comparada com a decisão final humana; a concordância entre revisores usa incluir/talvez contra excluir.</p></header>
+      <div class="metric" id="metrics"></div>
+    </div>
+    <div class="panel">
+      <header><h2>Registro de uso de IA</h2><p>As sugestões pedidas nesta ferramenta entram aqui sozinhas. Registre também o que foi feito fora dela, como o pipeline em Python.</p></header>
+      <form class="grid2" id="log-form" novalidate>
+        <label class="f">Etapa<select id="l-stage"><option>Protocolo</option><option>Estratégia de busca</option><option>Triagem de títulos e resumos</option><option>Texto completo</option><option>Extração de dados</option><option>Redação</option></select></label>
+        <label class="f">Ferramenta e versão<input type="text" id="l-tool" placeholder="Ex.: Claude Haiku 4.5 via Batch API"></label>
+        <label class="f" style="grid-column:1/-1">O que a IA fez<textarea id="l-what" placeholder="Ex.: classificou títulos contra os critérios do protocolo, em lotes de 75"></textarea></label>
+        <label class="f" style="grid-column:1/-1">Como foi verificado<textarea id="l-check" placeholder="Ex.: dois revisores triaram todos os títulos de forma independente"></textarea></label>
+        <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Adicionar ao registro</button><span class="note" id="l-err"></span></div>
+      </form>
+      <div id="log"></div>
+    </div>
+    <div class="panel">
+      <header><h2>Declaração de uso de IA</h2><p>Texto montado a partir do registro e das métricas. Revise antes de colar no artigo.</p></header>
+      <div class="decl" id="decl"></div>
+      <div class="row"><button class="btn" id="copy-decl">Copiar texto</button></div>
+    </div>
+  </section>
+
+  <p class="foot">Segue o PRISMA 2020 (Page et al., 2021) e o PRISMA-P. A busca por API continua no pipeline em Python, porque as chaves das bases não devem ficar numa página web. Colaboradores precisam do acesso "Colaborador" no menu Compartilhar para registrar decisões.</p>
+</div>
+
+<script>
+/* ===================== PURE (testável) ===================== */
+const KNOWN_SOURCES={
+  scopus:"Scopus", web_of_science:"Web of Science", acm_dl:"ACM Digital Library", ieee_xplore:"IEEE Xplore",
+  springer:"SpringerLink", openalex:"OpenAlex", sciencedirect:"ScienceDirect", wiley:"Wiley",
+  taylor_francis:"Taylor & Francis", google_scholar:"Google Scholar", pubmed:"PubMed", embase:"Embase",
+  lilacs:"LILACS/BVS", eric:"ERIC", other:"Outra"
+};
+const CONNECTOR={openalex:"connectors/openalex.py",springer:"connectors/springer.py",scopus:"connectors/scopus.py",ieee_xplore:"connectors/ieee_xplore.py",sciencedirect:"connectors/sciencedirect.py"};
+const KEY_ENV={springer:"SPRINGER_API_KEY",scopus:"ELSEVIER_API_KEY",ieee_xplore:"IEEE_API_KEY",sciencedirect:"ELSEVIER_API_KEY"};
+const MANUAL_PREFIX={acm_dl:"acm",wiley:"wiley",taylor_francis:"tandf",web_of_science:"wos",sciencedirect:"sciencedirect",google_scholar:"google_scholar"};
+const SUSPECT=/^(erratum|corrigendum|retraction|editorial\b|book review|front matter|back matter|table of contents|preface\b|foreword\b|author index|subject index|issue information|index$)/i;
+const DEFAULT_TYPES="book, proceedings, techreport, inbook, incollection, book chapter, editorial, editorial material, erratum, correction, letter, note, conference review, book review, meeting abstract, retracted, retraction";
+
+function normDoi(d){if(!d)return"";d=String(d).trim().toLowerCase();for(const p of["https://doi.org/","http://doi.org/","https://dx.doi.org/","http://dx.doi.org/","doi:"])if(d.startsWith(p))d=d.slice(p.length);return d.replace(/^\/+|\/+$/g,"").trim()}
+function normTitle(t){if(!t)return"";return String(t).toLowerCase().replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim()}
+function delatex(s){if(s==null)return"";const ACC={'"':"\u0308","'":"\u0301","`":"\u0300","^":"\u0302","~":"\u0303",c:"\u0327"};return String(s).replace(/\{?\\([`'^"~=.uvHcdbtk])\s*\{?([A-Za-z])\}?\}?/g,(m,a,l)=>(l+(ACC[a]||"")).normalize("NFC")).replace(/\\(&|%|_|\$|#)/g,"$1").replace(/\\textendash|--/g,"–").replace(/\\[a-zA-Z]+\{([^{}]*)\}/g,"$1").replace(/[{}]/g,"").replace(/\s+/g," ").trim()}
+function pagesFrom(p){if(!p)return null;const s=String(p).trim();if(/^\d+$/.test(s))return null;const m=s.match(/(\d+)\s*[-–—]+\s*(\d+)/);if(m){const a=+m[1],b=+m[2];if(b>=a&&b-a<2000)return b-a+1}return null}
+function intOr(v){const n=parseInt(String(v||"").trim(),10);return isFinite(n)?n:null}
+
+function parseBib(text){
+  const out=[];let i=0;const n=text.length;
+  while(i<n){
+    const at=text.indexOf("@",i);if(at<0)break;
+    let j=at+1;while(j<n&&/[A-Za-z]/.test(text[j]))j++;
+    const type=text.slice(at+1,j).toLowerCase();
+    while(j<n&&/\s/.test(text[j]))j++;
+    if(text[j]!=="{"&&text[j]!=="("){i=j;continue}
+    const open=text[j],close=open==="{"?"}":")";let depth=1,k=j+1;
+    while(k<n&&depth>0){const c=text[k];if(c==="{")depth++;else if(c==="}")depth--;if(open==="("&&c===")"&&depth===1)break;k++}
+    const body=text.slice(j+1,k-(open==="{"?1:0));i=k+1;
+    if(["comment","preamble","string"].includes(type))continue;
+    const comma=body.indexOf(",");if(comma<0)continue;
+    const key=body.slice(0,comma).trim();const f={};let p=comma+1;const L=body.length;
+    while(p<L){
+      while(p<L&&/[\s,]/.test(body[p]))p++;
+      const nm=body.slice(p).match(/^([A-Za-z][\w\-:.]*)\s*=\s*/);if(!nm)break;
+      const name=nm[1].toLowerCase();p+=nm[0].length;let val="";
+      const readPart=()=>{
+        if(body[p]==="{"){let d=1,q=p+1;while(q<L&&d>0){if(body[q]==="{")d++;else if(body[q]==="}")d--;q++}val+=body.slice(p+1,q-1);p=q}
+        else if(body[p]==='"'){let d=0,q=p+1;while(q<L){const c=body[q];if(c==="{")d++;else if(c==="}")d--;else if(c==='"'&&d===0&&body[q-1]!=="\\")break;q++}val+=body.slice(p+1,q);p=q+1}
+        else{const m=body.slice(p).match(/^[^,#}]*/);val+=m[0].trim();p+=m[0].length}
+      };
+      readPart();
+      while(p<L){const m=body.slice(p).match(/^\s*#\s*/);if(!m)break;p+=m[0].length;readPart()}
+      f[name]=val;
+    }
+    out.push({_type:type,_key:key,...f});
+  }
+  return out.map(e=>({
+    t:delatex(e.title),a:delatex(e.author).replace(/\s+and\s+/g,"; "),y:intOr(e.year),
+    v:delatex(e.journal||e.booktitle||e.series||e.publisher||""),doi:delatex(e.doi),ab:delatex(e.abstract),
+    u:delatex(e.url||""),ty:e.type?delatex(e.type):e._type,
+    lg:delatex(e.language||""),pg:intOr(e.numpages)||pagesFrom(delatex(e.pages)),kw:delatex(e.keywords||e.author_keywords||"")
+  }));
+}
+
+function parseRIS(text){
+  const out=[];let cur=null;
+  for(const raw of text.split(/\r?\n/)){
+    const m=raw.match(/^([A-Z][A-Z0-9])\s{1,2}-\s?(.*)$/);if(!m)continue;
+    const tag=m[1],val=m[2].trim();
+    if(tag==="TY"){cur={TY:val,AU:[],KW:[]};continue}
+    if(!cur)continue;
+    if(tag==="ER"){out.push(cur);cur=null;continue}
+    if(tag==="AU"||tag==="A1")cur.AU.push(val);else if(tag==="KW")cur.KW.push(val);else if(!(tag in cur))cur[tag]=val;else if(tag==="AB"||tag==="N2")cur[tag]+=" "+val;
+  }
+  if(cur)out.push(cur);
+  const TY={JOUR:"article",CONF:"inproceedings",CPAPER:"inproceedings",BOOK:"book",CHAP:"inbook",RPRT:"techreport",THES:"thesis",GEN:"misc",EJOUR:"article",ABST:"meeting abstract",EDBOOK:"book"};
+  return out.map(r=>({t:r.TI||r.T1||"",a:r.AU.join("; "),y:intOr((r.PY||r.Y1||r.DA||"").slice(0,4)),v:r.T2||r.JO||r.JF||r.J2||r.BT||"",doi:r.DO||"",ab:r.AB||r.N2||"",u:r.UR||"",
+    ty:TY[r.TY]||String(r.TY||"").toLowerCase(),lg:r.LA||"",pg:(r.SP&&r.EP&&+r.EP>=+r.SP)?(+r.EP-+r.SP+1):null,kw:r.KW.join("; ")}));
+}
+
+function parseWoS(text){
+  const out=[];let cur=null,last=null;
+  for(const raw of text.split(/\r?\n/)){
+    if(/^ER\s*$/.test(raw)){if(cur)out.push(cur);cur=null;last=null;continue}
+    if(/^(FN|VR|EF)\b/.test(raw))continue;
+    const m=raw.match(/^([A-Z][A-Z0-9]) (.*)$/);
+    if(m){if(!cur)cur={};last=m[1];cur[last]=cur[last]?cur[last]+"\n"+m[2]:m[2];continue}
+    if(cur&&last&&/^   /.test(raw))cur[last]+="\n"+raw.trim();
+  }
+  if(cur)out.push(cur);
+  return out.map(r=>({t:(r.TI||"").replace(/\n/g," "),a:(r.AU||"").split("\n").join("; "),y:intOr(r.PY),v:(r.SO||"").replace(/\n/g," "),doi:r.DI||"",ab:(r.AB||"").replace(/\n/g," "),
+    u:r.DI?"https://doi.org/"+r.DI:"",ty:(r.DT||"").split(";")[0].trim(),lg:r.LA||"",pg:intOr(r.PG)||((r.BP&&r.EP&&+r.EP>=+r.BP)?(+r.EP-+r.BP+1):null),kw:(r.DE||"").replace(/\n/g," ")}));
+}
+
+function splitDelimited(text,delim){
+  const rows=[];let row=[],f="",q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c;continue}
+    if(c==='"'&&f===""){q=true;continue}
+    if(c===delim){row.push(f);f="";continue}
+    if(c==="\n"||c==="\r"){if(c==="\r"&&text[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f="";continue}
+    f+=c;
+  }
+  if(f!==""||row.length){row.push(f);rows.push(row)}
+  return rows.filter(r=>r.length>1||(r[0]||"").trim()!=="");
+}
+const COLS={
+  t:["title","article title","document title","ti","titulo","título"],a:["authors","author","author full names","au","author names","autores"],
+  y:["year","publication year","py","publication_year","ano"],v:["source title","venue","journal","publication title","so","source","conference","publication","periódico"],
+  doi:["doi","di"],ab:["abstract","ab","resumo"],u:["url","link","document link","articleurl","fulltexturl"],
+  ty:["document type","doc_type","type","dt","publication type","pub_type","content_type"],lg:["language of original document","language","la","idioma","lang"],
+  pg:["page count","numpages","pg","num_pages"],pr:["pages","page range"],ps:["page start","start page","bp"],pe:["page end","end page","ep"],
+  src:["source_db"],kw:["author keywords","keywords","de","index keywords","author_keywords"]
+};
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,"");
+  const first=text.split(/\r?\n/,1)[0]||"";
+  const cnt=d=>first.split(d).length;
+  const delim=cnt("\t")>cnt(",")&&cnt("\t")>cnt(";")?"\t":(cnt(";")>cnt(",")?";":",");
+  const rows=splitDelimited(text,delim);if(rows.length<2)return{records:[],hasSource:false};
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const idx={};for(const[k,names]of Object.entries(COLS)){for(const nm of names){const i=head.indexOf(nm);if(i>=0){idx[k]=i;break}}}
+  if(idx.t==null)return{records:[],hasSource:false,error:"Nenhuma coluna de título encontrada."};
+  const g=(r,k)=>idx[k]==null?"":(r[idx[k]]||"").trim();
+  const recs=rows.slice(1).map(r=>{
+    let pg=intOr(g(r,"pg"));if(!pg)pg=pagesFrom(g(r,"pr"));
+    if(!pg){const s=intOr(g(r,"ps")),e=intOr(g(r,"pe"));if(s&&e&&e>=s)pg=e-s+1}
+    return{t:g(r,"t"),a:g(r,"a"),y:intOr(g(r,"y")),v:g(r,"v"),doi:g(r,"doi"),ab:g(r,"ab"),u:g(r,"u"),ty:g(r,"ty"),lg:g(r,"lg"),pg,kw:g(r,"kw"),src:g(r,"src")||undefined};
+  }).filter(r=>r.t);
+  return{records:recs,hasSource:idx.src!=null,isScopus:head.includes("eid")};
+}
+function detectFormat(name,text){
+  const n=name.toLowerCase();
+  if(n.endsWith(".bib")||/^\s*@\w+\s*[{(]/.test(text))return"bib";
+  if(n.endsWith(".ris")||/^TY  - /m.test(text.slice(0,2000)))return"ris";
+  if(/^\uFEFF?FN /.test(text)||(/^PT [A-Z]\s*$/m.test(text.slice(0,3000))&&/^ER\s*$/m.test(text)))return"wos";
+  return"csv";
+}
+function guessSource(name,fmt,parsed){
+  const n=name.toLowerCase();
+  const pref=[["scopus","scopus"],["savedrecs","web_of_science"],["wos","web_of_science"],["acm","acm_dl"],["ieee","ieee_xplore"],["wiley","wiley"],["tandf","taylor_francis"],["taylor","taylor_francis"],["sciencedirect","sciencedirect"],["sd_","sciencedirect"],["google_scholar","google_scholar"],["scholar","google_scholar"],["springer","springer"],["openalex","openalex"],["pubmed","pubmed"]];
+  for(const[p,s]of pref)if(n.startsWith(p)||n.includes(p+"_")||n.includes(p+"-"))return s;
+  if(fmt==="wos")return"web_of_science";
+  if(parsed&&parsed.isScopus)return"scopus";
+  return"";
+}
+function parseFile(name,text){
+  const fmt=detectFormat(name,text);let res;
+  if(fmt==="bib")res={records:parseBib(text)};else if(fmt==="ris")res={records:parseRIS(text)};else if(fmt==="wos")res={records:parseWoS(text)};else res=parseCSV(text);
+  res.fmt=fmt;res.guess=guessSource(name,fmt,res);
+  res.records=(res.records||[]).filter(r=>r.t&&r.t.trim()).map(r=>({...r,ab:(r.ab||"").slice(0,4000)}));
+  return res;
+}
+function chunkRecords(recs,maxBytes=190000,maxItems=250){
+  const chunks=[];let cur=[],size=2;
+  for(const r of recs){const s=JSON.stringify(r).length+1;if(cur.length&&(size+s>maxBytes||cur.length>=maxItems)){chunks.push(cur);cur=[];size=2}cur.push(r);size+=s}
+  if(cur.length)chunks.push(cur);return chunks;
+}
+
+function termsOf(block){return(block.terms||"").split(/\n|;/).map(s=>s.trim().replace(/^"+|"+$/g,"").trim()).filter(Boolean)}
+function q(t){return'"'+String(t).replace(/"/g,"")+'"'}
+function fieldList(P){const f=P.fields||{};const l=["title","abstract","keywords"].filter(k=>f[k]!==false);return l.length?l:["title","abstract","keywords"]}
+function fieldsLabel(P){const n={title:"Título",abstract:"Resumo",keywords:"Palavras-chave"};const l=fieldList(P).map(k=>n[k]);return l.length>1?l.slice(0,-1).join(", ")+" e "+l[l.length-1]:l[0]}
+function docTypeList(P){const d=P.docTypes||{};return["journal","conference"].filter(k=>d[k])}
+const BUILDERS={
+  scopus(B,fs,P){
+    const combo={"title,abstract,keywords":"TITLE-ABS-KEY","title,abstract":"TITLE-ABS","title":"TITLE","abstract":"ABS","keywords":"KEY"}[fs.join(",")];
+    const one={title:"TITLE",abstract:"ABS",keywords:"KEY"};
+    const or=b=>"( "+b.map(q).join(" OR ")+" )";
+    let s=combo?combo+"( "+B.map(or).join(" AND ")+" )":B.map(b=>"( "+fs.map(f=>one[f]+or(b)).join(" OR ")+" )").join(" AND ");
+    const yf=intOr(P.yearFrom),yt=intOr(P.yearTo);
+    if(yf)s+=" AND PUBYEAR > "+(yf-1);if(yt)s+=" AND PUBYEAR < "+(yt+1);
+    const dt=docTypeList(P).map(d=>({journal:'LIMIT-TO( DOCTYPE , "ar" )',conference:'LIMIT-TO( DOCTYPE , "cp" )'})[d]);
+    if(dt.length)s+=" AND ( "+dt.join(" OR ")+" )";
+    const langs=(P.langs||"").split(",").map(x=>x.trim()).filter(Boolean);
+    if(langs.length)s+=" AND ( "+langs.map(l=>"LIMIT-TO( LANGUAGE , "+q(l)+" )").join(" OR ")+" )";
+    return{s,notes:["Cole em Advanced document search."]};
+  },
+  web_of_science(B,fs,P){
+    const tag={title:"TI",abstract:"AB",keywords:"AK"};const or=b=>"("+b.map(q).join(" OR ")+")";
+    let s=fs.length===3?"TS=("+B.map(or).join(" AND ")+")":B.map(b=>"("+fs.map(f=>tag[f]+"="+or(b)).join(" OR ")+")").join(" AND ");
+    const yf=intOr(P.yearFrom),yt=intOr(P.yearTo);
+    if(yf||yt)s+=" AND PY=("+(yf||1900)+"-"+(yt||new Date().getFullYear())+")";
+    const dt=docTypeList(P).map(d=>({journal:'"Article"',conference:'"Proceedings Paper"'})[d]);
+    if(dt.length)s+=" AND DT=("+dt.join(" OR ")+")";
+    const langs=(P.langs||"").split(",").map(x=>x.trim()).filter(Boolean);
+    if(langs.length)s+=" AND LA=("+langs.map(q).join(" OR ")+")";
+    const notes=["Cole em Advanced Search › Query Builder."];
+    if(fs.length===3)notes.push("TS= busca em título, resumo, palavras-chave do autor e Keywords Plus.");
+    return{s,notes};
+  },
+  ieee_xplore(B,fs,P){
+    const nm={title:'"Document Title"',abstract:'"Abstract"',keywords:'"Author Keywords"'};
+    const s=B.map(b=>"("+b.flatMap(t=>fs.map(f=>nm[f]+":"+q(t))).join(" OR ")+")").join(" AND ");
+    const n=B.reduce((a,b)=>a+b.length,0)*fs.length,w=B.flat().filter(t=>t.includes("*")).length*fs.length;
+    const notes=["Cole em Advanced Search › Command Search. Ano e tipo (Journals, Conferences) ficam nos filtros da página de resultados."];
+    if(n>25||w>8)notes.push(`Esta string tem ${n} termos${w?" e "+w+" curingas":""}. O IEEE Xplore limita termos e curingas por busca; se for recusada, divida em uma busca por campo e some os resultados.`);
+    return{s,notes};
+  },
+  acm_dl(B,fs,P){
+    const nm={title:"Title",abstract:"Abstract",keywords:"Keywords"};
+    const s=B.map(b=>"["+b.flatMap(t=>fs.map(f=>"["+nm[f]+": "+q(t)+"]")).join(" OR ")+"]").join(" AND ");
+    const yf=intOr(P.yearFrom),yt=intOr(P.yearTo);
+    const notes=["Cole em Advanced Search › Edit Query."];
+    const filt=[];if(yf||yt)filt.push("Publication Date "+(yf||"…")+"–"+(yt||"atual"));if(docTypeList(P).length)filt.push("Content Type: Research Article");
+    if(filt.length)notes.push("Filtros no painel lateral: "+filt.join("; ")+".");
+    return{s,notes};
+  },
+  eric(B,fs,P){
+    const tag={title:"TI",abstract:"AB",keywords:"KW"};
+    const s=B.map(b=>"("+fs.map(f=>tag[f]+" ("+b.map(q).join(" OR ")+")").join(" OR ")+")").join(" AND ");
+    return{s,notes:["Sintaxe do EBSCOhost. No eric.ed.gov use a string genérica e marque “Peer reviewed only”."]};
+  },
+  pubmed(B,fs,P){
+    const tag=fs.includes("title")&&fs.includes("abstract")?"[tiab]":fs.includes("title")?"[ti]":"[tiab]";
+    const s=B.map(b=>"("+b.map(t=>q(t)+tag).join(" OR ")+")").join(" AND ");
+    const yf=intOr(P.yearFrom),yt=intOr(P.yearTo);
+    return{s:s+(yf||yt?` AND ("${yf||1800}"[dp] : "${yt||3000}"[dp])`:""),notes:[]};
+  }
+};
+function genericString(B){return B.map(b=>"( "+b.map(q).join(" OR ")+" )").join(" AND ")}
+function buildStrings(P){
+  const B=(P.blocks||[]).map(termsOf).filter(b=>b.length);
+  if(!B.length)return[];
+  const fs=fieldList(P);const out=[];const seen=new Set();
+  for(const src of(P.sources||[])){
+    if(!src.id||seen.has(src.id))continue;seen.add(src.id);
+    const b=BUILDERS[src.id];const r=b?b(B,fs,P):{s:genericString(B),notes:["Sintaxe genérica: adapte aos campos da base e aplique os filtros de ano, idioma e tipo na página de resultados."]};
+    const custom=(src.custom||"").trim();
+    out.push({id:src.id,label:KNOWN_SOURCES[src.id]||src.id,role:src.role||"main",auto:r.s,s:custom||r.s,custom:!!custom,notes:r.notes});
+  }
+  out.push({id:"generic",label:"Genérica",role:"ref",auto:genericString(B),s:genericString(B),custom:false,notes:["Estrutura conceitual, igual à tabela do documento."]});
+  return out;
+}
+
+/* funil: dedup -> filtros automáticos -> triagem */
+function langOk(lg,langs){
+  if(!lg)return true;const L=lg.toLowerCase();
+  return langs.some(a=>{a=a.toLowerCase();if(L.includes(a))return true;if((a==="english"||a==="inglês"||a==="ingles")&&/^(en|eng)\b/.test(L))return true;return false});
+}
+function computeFunnel(records,P){
+  const typesEx=new Set((P.excludedTypes??DEFAULT_TYPES).split(",").map(s=>s.trim().toLowerCase()).filter(Boolean));
+  const yf=intOr(P.yearFrom),yt=intOr(P.yearTo),short=intOr(P.shortPages)||0;
+  const langs=(P.langs||"English").split(",").map(s=>s.trim()).filter(Boolean);
+  const order=records.map((r,i)=>({r,i})).sort((a,b)=>((b.r.ab?1:0)-(a.r.ab?1:0))||a.i-b.i);
+  const seenD=new Map(),seenT=new Map(),dupOf={};
+  for(const{r}of order){
+    const d=normDoi(r.doi),t=normTitle(r.t);
+    const hit=(d&&seenD.get(d))||(t&&seenT.get(t));
+    if(hit){dupOf[r.k]=hit;continue}
+    if(d)seenD.set(d,r.k);if(t)seenT.set(t,r.k);
+  }
+  const auto={};
+  for(const r of records){
+    if(dupOf[r.k])continue;
+    const ty=(r.ty||"").toLowerCase().trim();
+    if(ty&&typesEx.has(ty)){auto[r.k]="Tipo de documento: "+r.ty;continue}
+    if(P.suspectTitles!==false&&SUSPECT.test((r.t||"").trim())){auto[r.k]="Título de errata/editorial/índice";continue}
+    if(r.y&&((yf&&r.y<yf)||(yt&&r.y>yt))){auto[r.k]="Fora da janela de anos";continue}
+    if(P.langFilter!==false&&!langOk(r.lg,langs)){auto[r.k]="Idioma: "+r.lg;continue}
+    if(short&&r.pg&&r.pg<=short){auto[r.k]="Artigo curto (≤ "+short+" páginas)";continue}
+  }
+  const screen=records.filter(r=>!dupOf[r.k]&&!auto[r.k]);
+  return{dupOf,auto,screen};
+}
+const INC=d=>d==="inc"||d==="may";
+function statusOf(k,stage,ctx){
+  const c=ctx.cons[stage][k];if(c&&c.d)return{s:c.d==="may"?"inc":c.d,final:c.d,by:"consenso",r:c.r};
+  const ids=ctx.revIds,v=ids.map(id=>ctx.votes[stage][id]?.[k]).filter(Boolean);
+  if(ctx.mode===1){const v1=ctx.votes[stage][ids[0]]?.[k];if(!v1)return{s:"pend"};return{s:v1.d==="may"?"inc":v1.d,final:v1.d,r:v1.r}}
+  if(v.length<2)return{s:"pend",n:v.length};
+  const[a,b]=v;
+  if(stage==="ta"){if(INC(a.d)&&INC(b.d))return{s:"inc",final:"inc"};if(a.d==="exc"&&b.d==="exc")return{s:"exc",final:"exc",r:a.r||b.r};return{s:"conf"}}
+  if(a.d===b.d)return{s:a.d,final:a.d,r:a.r||b.r};
+  return{s:"conf"};
+}
+function kappa(pairs){
+  const n=pairs.length;if(n<5)return null;
+  let a=0,b=0,c=0,d=0;for(const[x,y]of pairs){if(x&&y)a++;else if(x&&!y)b++;else if(!x&&y)c++;else d++}
+  const po=(a+d)/n,pe=((a+b)/n)*((a+c)/n)+((c+d)/n)*((b+d)/n);
+  return pe===1?1:(po-pe)/(1-pe);
+}
+/* critérios automáticos e livro de códigos */
+const RULE_TYPES={none:"Manual",year:"Ano dentro da janela",lang:"Idioma aceito",doctype:"Tipo de documento aceito",block:"Termos de um bloco da string",string:"Todos os blocos da string",terms:"Lista de termos"};
+const FIELD_NAMES={title:"título",abstract:"resumo",keywords:"palavras-chave"};
+function termRegex(terms){
+  const parts=terms.map(t=>String(t).trim().replace(/^"+|"+$/g,"")).filter(t=>t.replace(/\*/g,"").length>1)
+    .sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.+?^${}()|[\]\\]/g,"\\$&").replace(/\*/g,"[\\w-]*").replace(/\s+/g,"[\\s-]+"));
+  if(!parts.length)return null;
+  return new RegExp("(?<![\\w])("+parts.join("|")+")(?![\\w])","i");
+}
+function fieldText(r,f){return f==="title"?r.t:f==="abstract"?r.ab:f==="keywords"?r.kw:""}
+function snippet(text,idx,len){const a=Math.max(0,idx-50),b=Math.min(text.length,idx+len+50);return(a?"…":"")+text.slice(a,b).replace(/\s+/g," ")+(b<text.length?"…":"")}
+function findIn(r,re,fields){
+  for(const f of fields){const tx=fieldText(r,f)||"";const m=re.exec(tx);if(m)return{field:f,term:m[1],snip:snippet(tx,m.index,m[1].length)}}
+  return null;
+}
+function ruleFields(rule){const fs=["title","abstract","keywords"].filter(f=>(rule.fields||{title:1,abstract:1,keywords:1})[f]);return fs.length?fs:["title","abstract","keywords"]}
+function evalRule(rule,r,P,kind){
+  if(!rule||!rule.type||rule.type==="none")return null;
+  const flip=(cond,ev)=>{ // cond = registro "atende ao protocolo" (ano, idioma, tipo) ou "termo encontrado"
+    if(cond===null)return{v:"u",ev};
+    const objective=["year","lang","doctype"].includes(rule.type);
+    if(kind==="ic")return{v:cond?"y":"n",ev};
+    return{v:objective?(cond?"n":"y"):(cond?"y":"n"),ev};
+  };
+  if(rule.type==="year"){
+    if(!r.y)return flip(null,"ano não informado");
+    const yf=intOr(P.yearFrom),yt=intOr(P.yearTo);
+    return flip(!((yf&&r.y<yf)||(yt&&r.y>yt)),"ano "+r.y);
+  }
+  if(rule.type==="lang"){
+    if(!r.lg)return flip(null,"idioma não informado pela base");
+    const langs=(rule.values||P.langs||"English").split(",").map(s=>s.trim()).filter(Boolean);
+    return flip(langOk(r.lg,langs),"idioma: "+r.lg);
+  }
+  if(rule.type==="doctype"){
+    if(!r.ty)return flip(null,"tipo não informado pela base");
+    const ok=(rule.values||"article, journal, conference, inproceedings, proceedings paper").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean);
+    const ty=r.ty.toLowerCase();
+    return flip(ok.some(o=>ty.includes(o)),"tipo: "+r.ty);
+  }
+  let groups=[];
+  if(rule.type==="terms")groups=[(rule.terms||"").split(/\n|;/).map(s=>s.trim()).filter(Boolean)];
+  if(rule.type==="block"){const b=(P.blocks||[])[+rule.block||0];groups=b?[termsOf(b)]:[]}
+  if(rule.type==="string")groups=(P.blocks||[]).map(termsOf).filter(g=>g.length);
+  groups=groups.filter(g=>g.length);
+  if(!groups.length)return null;
+  const fs=ruleFields(rule);const hits=[];
+  for(const g of groups){const re=termRegex(g);const h=re&&findIn(r,re,fs);if(!h){
+      const missingAbs=fs.includes("abstract")&&!r.ab;
+      return flip(missingAbs?null:false,missingAbs?"nenhum termo no título; registro sem resumo":"nenhum termo encontrado em "+fs.map(f=>FIELD_NAMES[f]).join(", "));
+    }hits.push(h)}
+  return flip(true,hits.map(h=>`“${h.term}” no ${FIELD_NAMES[h.field]}: ${h.snip}`).join(" | "));
+}
+function evalCriteria(r,P){
+  const out={};
+  for(const kind of["ic","ec"])for(const c of(P[kind]||[])){if(!c.c)continue;const e=evalRule(c.rule,r,P,kind);if(e)out[c.c]=e}
+  return out;
+}
+/* sugestão de decisão a partir das respostas por critério: y = atende (IC) ou se aplica (EC) */
+function suggestDecision(ans,P){
+  const ic=(P.ic||[]).filter(c=>c.c),ec=(P.ec||[]).filter(c=>c.c);
+  const failIC=ic.find(c=>ans[c.c]==="n");if(failIC)return{d:"exc",r:failIC.c,why:"não atende "+failIC.c};
+  const hitEC=ec.find(c=>ans[c.c]==="y");if(hitEC)return{d:"exc",r:hitEC.c,why:hitEC.c+" se aplica"};
+  const all=[...ic,...ec];const answered=all.filter(c=>ans[c.c]);
+  if(answered.length<all.length)return{d:null,why:`responda ${all.length-answered.length} critério${all.length-answered.length>1?"s":""}`};
+  if(ic.every(c=>ans[c.c]==="y")&&ec.every(c=>ans[c.c]==="n"))return{d:"inc",why:"atende a todos os IC e a nenhum EC"};
+  return{d:"may",why:"há critérios incertos"};
+}
+function parseCodes(text){
+  return String(text||"").split(/\n/).map(l=>l.trim()).filter(Boolean).map(l=>{const i=l.indexOf(":");return i>0?{cat:l.slice(0,i).trim(),terms:l.slice(i+1).split(/[;,]/).map(s=>s.trim()).filter(Boolean)}:{cat:l,terms:[l]}});
+}
+function suggestCodes(r,codesText){
+  const out=[];
+  for(const c of parseCodes(codesText)){const re=termRegex(c.terms);if(!re)continue;const h=findIn(r,re,["title","abstract","keywords"]);if(h)out.push({cat:c.cat,term:h.term,field:h.field,snip:h.snip})}
+  return out;
+}
+/* ===================== FIM PURE ===================== */
+
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtN=n=>Number(n||0).toLocaleString("pt-BR");
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today=()=>new Date().toISOString().slice(0,10);
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3200)}
+
+const DEFAULT_SELECTION=`1. Triagem: os registros exportados das bases (BibTeX, RIS ou CSV) são importados na Bancada PRISMA, que remove duplicatas e registros inelegíveis por tipo, ano e idioma. Dois revisores leem títulos e resumos de forma independente; sugestões de IA, quando usadas, só são exibidas depois da decisão de cada revisor.
+2. Leitura do texto completo: os estudos aprovados são lidos na íntegra pelos dois revisores, e cada exclusão é registrada com o critério correspondente.
+3. Avaliação de qualidade: os estudos incluídos são avaliados com um checklist de qualidade definido pela equipe.
+4. Extração de dados: os dados são extraídos em formulário próprio, com uma coluna para cada questão secundária.`;
+const DEFAULT_PROTOCOL={
+  title:"",objective:"",logic:"",
+  rqIntro:"As questões foram estruturadas para compor a matriz de extração do estudo:",
+  gq:{label:"General Question",en:"",pt:""},
+  sqs:[{id:"SQ1",label:"",en:"",pt:""}],
+  searchIntro:"A string foi estruturada em blocos obrigatórios de interseção (AND).",
+  blocks:[{name:"",terms:""},{name:"",terms:""}],
+  fields:{title:true,abstract:true,keywords:true},
+  docTypes:{journal:true,conference:true},
+  docTypesText:"Serão incluídos artigos de periódicos revisados por pares e trabalhos publicados em anais de conferências.",
+  yearFrom:"",yearTo:"",langs:"English",
+  ic:[{c:"IC1",t:""}],ec:[{c:"EC1",t:""}],
+  sources:[{id:"scopus",role:"main",how:"api",date:"",reported:"",custom:""},{id:"web_of_science",role:"main",how:"manual",date:"",reported:"",custom:""},{id:"acm_dl",role:"main",how:"manual",date:"",reported:"",custom:""}],
+  compPurpose:"",selection:DEFAULT_SELECTION,
+  excludedTypes:DEFAULT_TYPES,suspectTitles:true,langFilter:true,shortPages:"0",reviewers:"2",blind:true,updatedAt:""
+};
+const EXAMPLE_PROTOCOL={...DEFAULT_PROTOCOL,
+  title:"AI Agents and Agentic AI in Logistics Operations: A Systematic Literature Review and Taxonomy",
+  objective:"Mapear como agentes de IA e IA agêntica têm sido aplicados em operações logísticas. (exemplo do repositório)",
+  gq:{label:"General Question",en:"How have AI agents and agentic AI been applied in logistics operations?",pt:"Como agentes de IA e IA agêntica têm sido aplicados em operações logísticas?"},
+  sqs:[{id:"SQ1",label:"Logistics tasks",en:"Which logistics tasks are supported by AI agents?",pt:"Quais tarefas logísticas são apoiadas por agentes de IA?"},{id:"SQ2",label:"Architectures",en:"Which agent architectures are used?",pt:"Quais arquiteturas de agentes são usadas?"}],
+  blocks:[{name:"Logistics Operations",terms:"logistics\nlogistics operations\nlogistic operations\nsupply chain\nsupply chain management\nintralogistics\nwarehouse operations\ntransportation logistics\nlast-mile delivery"},
+          {name:"AI Agents and Agentic AI",terms:"AI agent\nAI agents\nagentic AI\nintelligent agent\nintelligent agents\nautonomous agent\nautonomous agents\nmulti-agent system\nmulti-agent systems\nagent-based system\nagent-based systems\nLLM agent\nLLM agents\nlarge language model agent\nlarge language model agents\ngenerative agent\ngenerative agents"}],
+  yearFrom:"2016",
+  ic:[["IC1","Publicado em periódico, conferência ou workshop revisado por pares."],["IC2","Contém termos que satisfazem a string de busca definida."],["IC3","Escrito em inglês."],["IC4","Publicado entre janeiro de 2016 e a data de execução da busca."],["IC5","Aborda AI agents, agentic AI, intelligent agents, autonomous agents, multi-agent systems, LLM-based agents, generative agents ou abordagens agent-based correlatas."],["IC6","Aplica essas abordagens a operações logísticas, supply chain, intralogística, operações de armazém, transporte ou last-mile delivery."],["IC7","Aborda ao menos uma tarefa logística (planejamento, roteirização, escalonamento, previsão, otimização, coordenação, monitoramento, suporte à decisão, automação ou execução autônoma)."]].map(([c,t])=>({c,t})),
+  ec:[["EC1","Revisão de literatura, revisão sistemática, mapeamento sistemático, survey, revisão bibliométrica ou estudo secundário."],["EC2","Editorial, prefácio, resenha de livro, resumo de pôster, keynote ou tutorial, ou abstract curto sem conteúdo de pesquisa."],["EC3","Não relacionado a operações logísticas / supply chain / intralogística / armazém / transporte / last-mile."],["EC4","Não aborda AI agents, agentic AI, intelligent agents, autonomous agents, multi-agent systems, LLM-based agents ou abordagens agent-based correlatas."],["EC5","Aplica ML, otimização, simulação, heurísticas ou programação matemática sem componente agent-based ou agêntico."],["EC6","Usa IA generativa ou LLMs apenas como chatbot ou gerador de texto, sem comportamento agêntico."],["EC7","Usa agent-based modeling apenas para simulação descritiva, sem contribuição operacional logística."]].map(([c,t])=>({c,t})),
+  sources:[["openalex","api","1222"],["springer","api","11079"],["scopus","api","2335"],["ieee_xplore","api","852"],["sciencedirect","manual","884"],["web_of_science","manual","335"],["acm_dl","manual","1973"],["wiley","manual","622"],["taylor_francis","manual","790"]].map(([id,how,reported])=>({id,role:"main",how,date:"",reported,custom:""})),
+  shortPages:"4"
+};
+/* converte protocolos salvos no formato anterior */
+function migrateProtocol(p){
+  const d=structuredClone(DEFAULT_PROTOCOL);const o={...d,...(p||{})};
+  if(p&&!p.gq&&p.question)o.gq={label:"General Question",en:p.question,pt:""};
+  if(p&&!p.objective&&p.objectives)o.objective=p.objectives;
+  o.gq={...d.gq,...(o.gq||{})};o.fields={...d.fields,...(o.fields||{})};o.docTypes={...d.docTypes,...(o.docTypes||{})};
+  o.sqs=Array.isArray(o.sqs)?o.sqs:[];o.blocks=Array.isArray(o.blocks)?o.blocks:[];
+  o.sources=(o.sources||[]).map(s=>({role:"main",custom:"",...s}));
+  return o;
+}
+
+/* ===================== ESTADO ===================== */
+const S={
+  project:{protocol:migrateProtocol(null),imports:[],slots:{r1:null,r2:null},aiLog:[]},
+  chunks:{},           // chunkId -> {imp, items}
+  votes:{ta:{},ft:{}}, // stage -> uid -> {k:{d,r}}
+  voteDocs:{ta:{},ft:{}}, // stage -> uid -> chunkId -> map
+  cons:{ta:{},ft:{}},consDocs:{},
+  ai:{},aiDocs:{},
+  me:null,names:{},canWrite:true,ready:false,mode:"connecting",
+  view:"protocolo",pmode:"edit",ex:{},exDocs:{},exView:"form",cross:null,cur:{ta:null,ft:null,ex:null},filter:{ta:"mine",ft:"all"},search:{ta:"",ft:""}
+};
+let db=null,userApi=null,F=null; // F = derived funnel
+
+/* ---------- persistência ---------- */
+const WQ=new Map();let flushing=false;
+function setSave(cls,txt){const el=$("#save");el.className="save "+cls;el.querySelector("span").textContent=txt}
+function queue(path,data,mode="set"){
+  if(!db){return}
+  const prev=WQ.get(path);
+  if(prev&&prev.mode==="update"&&mode==="update")Object.assign(prev.data,data);else WQ.set(path,{data:mode==="update"?{...data}:data,mode});
+  flush();
+}
+async function flush(){
+  if(flushing)return;flushing=true;setSave("busy","Salvando…");
+  while(WQ.size){
+    const[p,{data,mode}]=WQ.entries().next().value;WQ.delete(p);
+    try{
+      if(data===null)await db.doc(p).delete();
+      else if(mode==="update"){try{await db.doc(p).update(data)}catch(e){if(e&&e.code==="invalid_argument")await db.doc(p).set({...S.project,...data});else throw e}}
+      else await db.doc(p).set(data);
+    }catch(e){
+      flushing=false;
+      if(e&&e.code==="quota_exceeded"){setSave("err","Armazenamento cheio");toast("O armazenamento desta ferramenta está cheio. Remova importações antigas para liberar espaço.")}
+      else if(e&&e.code==="invalid_argument"){S.canWrite=false;setSave("err","Somente leitura");toast("Você não tem permissão para salvar. Peça acesso de Colaborador a quem compartilhou.")}
+      else{setSave("err","Erro ao salvar");toast("Não foi possível salvar agora. Tente de novo em instantes.")}
+      return;
+    }
+  }
+  flushing=false;setSave("ok","Tudo salvo");
+}
+let projTimer=null,projPatch={};
+function saveProject(patch,delay=600){Object.assign(projPatch,patch);clearTimeout(projTimer);setSave("busy","Editando…");projTimer=setTimeout(()=>{const p=projPatch;projPatch={};projTimer=null;queue("project/main",JSON.parse(JSON.stringify(p)),"update")},delay)}
+function P(){return S.project.protocol}
+function setProto(k,v){P()[k]=v;saveProject({protocol:P()});scheduleDerive()}
+
+/* ---------- conexão ---------- */
+async function connect(){
+  try{
+    db=await window.claude?.use?.("db");userApi=await window.claude?.use?.("user");
+  }catch(e){db=null}
+  if(!db){S.mode="offline";setSave("err","Sem armazenamento: nada será salvo");S.ready=true;renderAll();return}
+  try{S.me=userApi?await userApi.id():null}catch(e){}
+  try{const c=await userApi?.can("data.write");if(c===false)S.canWrite=false}catch(e){}
+  S.mode="db";
+  db.doc("project/main").onSnapshot(snap=>{
+    if(!snap.exists){if(S.canWrite)db.doc("project/main").set(JSON.parse(JSON.stringify(S.project))).catch(()=>{});S.ready=true;renderAll();return}
+    const d=snap.data();
+    const pending=projTimer!==null||WQ.has("project/main");
+    const next={protocol:migrateProtocol(d.protocol),imports:d.imports||[],slots:d.slots||{r1:null,r2:null},aiLog:d.aiLog||[]};
+    if(pending){next.protocol=S.project.protocol}
+    const slotsChanged=JSON.stringify(next.slots)!==JSON.stringify(S.project.slots);
+    S.project=next;S.ready=true;
+    if(slotsChanged)subscribeVotes();
+    loadNames();renderAll();
+  },()=>setSave("err","Conexão perdida. Recarregue a página."));
+  db.collection("records").onSnapshot(qs=>{const m={};qs.docs.forEach(d=>{m[d.id]=d.data()});S.chunks=m;scheduleDerive()},()=>{});
+  db.collection("consensus").onSnapshot(qs=>{const t={ta:{},ft:{}};qs.docs.forEach(d=>{const st=d.id.startsWith("ft-")?"ft":"ta";Object.assign(t[st],d.data().m||{});S.consDocs[d.id]=d.data().m||{}});S.cons=t;scheduleDerive()},()=>{});
+  db.collection("extract").onSnapshot(qs=>{const t={};qs.docs.forEach(d=>{const m=d.data().m||{};S.exDocs[d.id]=m;Object.assign(t,m)});if(!WQ.size)S.ex=t;else S.ex={...t,...S.ex};scheduleDerive()},()=>{});
+  db.collection("ai").onSnapshot(qs=>{const t={};qs.docs.forEach(d=>{Object.assign(t,d.data().m||{});S.aiDocs[d.id]=d.data().m||{}});S.ai=t;scheduleDerive()},()=>{});
+  subscribeVotes();
+}
+let voteUnsubs=[];
+function subscribeVotes(){
+  voteUnsubs.forEach(u=>{try{u()}catch(e){}});voteUnsubs=[];
+  S.votes={ta:{},ft:{}};S.voteDocs={ta:{},ft:{}};
+  const ids=[S.project.slots.r1,S.project.slots.r2].filter(Boolean);
+  for(const id of ids)for(const st of["ta","ft"]){
+    voteUnsubs.push(db.collection("votes/"+id+"/"+st).onSnapshot(qs=>{
+      const docs={},all={};qs.docs.forEach(d=>{docs[d.id]=d.data().m||{};Object.assign(all,docs[d.id])});
+      if(id===S.me){for(const[cid,m]of Object.entries(S.voteDocs[st][id]||{})){if(WQ.has("votes/"+id+"/"+st+"/"+cid)){docs[cid]=m;Object.assign(all,m)}}}
+      S.voteDocs[st][id]=docs;S.votes[st][id]=all;scheduleDerive();
+    },()=>{}));
+  }
+}
+async function loadNames(){
+  const ids=[S.project.slots.r1,S.project.slots.r2].filter(Boolean).filter(id=>!(id in S.names));
+  if(!ids.length||!userApi)return;
+  try{const ps=await userApi.profiles(ids);for(const id of ids)S.names[id]=(ps&&ps[id]&&ps[id].name)||"";renderTeam()}catch(e){}
+}
+function nameOf(id){if(!id)return"";if(id===S.me)return(S.names[id]||"Você")+" (você)";return S.names[id]||"Revisor"}
+
+/* ---------- derivação ---------- */
+let deriveRaf=0;
+function scheduleDerive(){if(deriveRaf)return;deriveRaf=requestAnimationFrame(()=>{deriveRaf=0;derive();renderAll()})}
+function allRecords(){
+  const out=[];
+  for(const imp of S.project.imports){for(const cid of imp.chunks||[]){const ch=S.chunks[cid];if(!ch)continue;ch.items.forEach((r,i)=>out.push({...r,k:cid+"~"+i,src:r.src||imp.source,imp:imp.id}))}}
+  return out;
+}
+function ctx(){const mode=+P().reviewers===1?1:2;return{cons:S.cons,votes:S.votes,mode,revIds:mode===1?[S.project.slots.r1].filter(Boolean):[S.project.slots.r1,S.project.slots.r2].filter(Boolean)}}
+function derive(){
+  const recs=allRecords();const fun=computeFunnel(recs,P());const c=ctx();
+  const byK={};recs.forEach(r=>byK[r.k]=r);
+  const ta={},ft={};
+  fun.screen.forEach(r=>{ta[r.k]=statusOf(r.k,"ta",c)});
+  const ftPool=fun.screen.filter(r=>ta[r.k].s==="inc");
+  ftPool.forEach(r=>{ft[r.k]=statusOf(r.k,"ft",c)});
+  const crit={};const Pp=P();fun.screen.forEach(r=>{crit[r.k]=evalCriteria(r,Pp)});
+  F={recs,byK,...fun,ta,ft,ftPool,crit};
+}
+
+/* ===================== RENDER ===================== */
+function renderAll(){
+  if(!F)derive();
+  renderHeader();renderBadges();
+  if(S.view==="protocolo")renderProtocol();
+  if(S.view==="importar")renderImport();
+  if(S.view==="ta")renderScreen("ta");
+  if(S.view==="ft")renderScreen("ft");
+  if(S.view==="ex")renderExtract();
+  if(S.view==="prisma")renderPrisma();
+  if(S.view==="ia")renderIA();
+}
+function renderHeader(){
+  const t=P().title;$("#proj-title").textContent=t||"Bancada PRISMA";
+  const role=myRole();
+  $("#me").innerHTML=S.mode!=="db"?"":role?`Você é <b>${role==="r1"?"Revisor 1":"Revisor 2"}</b>`:(S.canWrite?"Você ainda não é revisor nesta revisão":"Acesso somente leitura");
+}
+function renderBadges(){
+  $("#b-imp").textContent=fmtN(F.recs.length);
+  const role=myRole();
+  const pendTA=F.screen.filter(r=>role?!S.votes.ta[S.me]?.[r.k]:F.ta[r.k].s==="pend").length;
+  const confTA=F.screen.filter(r=>F.ta[r.k].s==="conf").length;
+  $("#b-ta").textContent=confTA?fmtN(pendTA)+" · "+confTA+" conflito"+(confTA>1?"s":""):fmtN(pendTA);
+  $("#b-ta").className="badge"+(confTA?" warn":"");
+  const pendFT=F.ftPool.filter(r=>role?!S.votes.ft[S.me]?.[r.k]:F.ft[r.k].s==="pend").length;
+  const confFT=F.ftPool.filter(r=>F.ft[r.k].s==="conf").length;
+  $("#b-ft").textContent=confFT?fmtN(pendFT)+" · "+confFT+" conflito"+(confFT>1?"s":""):fmtN(pendFT);
+  $("#b-ft").className="badge"+(confFT?" warn":"");
+  const exPool=extractPool();$("#b-ex").textContent=exPool.length?fmtN(exPool.filter(r=>exStatus(r.k)==="done").length)+"/"+fmtN(exPool.length):"0";
+}
+function myRole(){if(!S.me)return null;if(S.project.slots.r1===S.me)return"r1";if(+P().reviewers!==1&&S.project.slots.r2===S.me)return"r2";return null}
+
+/* ---------- protocolo ---------- */
+const BLOCK_COLORS=["var(--hl1)","var(--hl2)","var(--hl3)","var(--hl4)"];
+function getPath(o,path){return path.split(".").reduce((a,k)=>a==null?a:a[k],o)}
+function setPath(o,path,v){const ks=path.split(".");let a=o;for(let i=0;i<ks.length-1;i++){const k=ks[i];if(a[k]==null)a[k]=/^\d+$/.test(ks[i+1])?[]:{};a=a[k]}a[ks[ks.length-1]]=v}
+function inProto(){return document.activeElement&&$("#proto-form").contains(document.activeElement)}
+function fmtDate(iso){if(!iso)return"";const d=new Date(iso);return isNaN(d)?"":d.toLocaleDateString("pt-BR")+" às "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
+function setProto2(path,v){setPath(P(),path,v);P().updatedAt=new Date().toISOString();saveProject({protocol:P()});scheduleDerive()}
+function renderProtocol(force){
+  const p=P();
+  $("#pm-edit").setAttribute("aria-pressed",S.pmode!=="doc");$("#pm-doc").setAttribute("aria-pressed",S.pmode==="doc");
+  $("#proto-edit").hidden=S.pmode==="doc";$("#proto-doc").hidden=S.pmode!=="doc";
+  $("#p-updated").textContent=p.updatedAt?"Última alteração em "+fmtDate(p.updatedAt):"";
+  if(S.pmode==="doc"){$("#sheet").innerHTML=docHTML(docModel(p));return}
+  if(force||!inProto()){
+    const ta=(path,rows,ph)=>`<textarea id="f-${path.replace(/\./g,"-")}" data-path="${path}" rows="${rows}" placeholder="${esc(ph||"")}">${esc(getPath(p,path)??"")}</textarea>`;
+    const inp=(path,ph,cls)=>`<input type="text" ${cls?`class="${cls}"`:""} id="f-${path.replace(/\./g,"-")}" data-path="${path}" value="${esc(getPath(p,path)??"")}" placeholder="${esc(ph||"")}">`;
+    $("#sqs").innerHTML=(p.sqs||[]).map((s,i)=>`<div class="rq"><div class="rq-id">${inp(`sqs.${i}.id`,"SQ"+(i+1),"code")}</div><div class="rq-body">
+      <div class="row" style="flex-wrap:nowrap"><label class="f" style="flex:1">Rótulo${inp(`sqs.${i}.label`,"Ex.: Data Sources")}</label><button class="btn danger small" data-rm="sqs.${i}" aria-label="Remover questão" style="align-self:flex-end">Remover</button></div>
+      <label class="f">Questão (inglês)${ta(`sqs.${i}.en`,2,"What … ?")}</label>
+      <label class="f">Questão (português)${ta(`sqs.${i}.pt`,2,"Quais … ?")}</label>
+      <label class="f">Livro de códigos: uma categoria por linha, no formato Categoria: termo; termo${ta(`sqs.${i}.codes`,4,"Machine learning: machine learning; random forest; svm\nNLP: natural language processing; text mining")}</label>
+      <span class="note">${parseCodes(s.codes).length} categoria${parseCodes(s.codes).length===1?"":"s"}. As sugestões da extração vêm destes termos.</span></div></div>`).join("");
+    $("#blocks").innerHTML=(p.blocks||[]).map((b,i)=>`${i?'<div class="and">AND</div>':""}<div class="block"><div class="sw" style="background:${BLOCK_COLORS[i%4]}">${i+1}</div><div class="body">
+      <div class="row" style="flex-wrap:nowrap"><label class="f" style="flex:1">Termo principal (major term)${inp(`blocks.${i}.name`,"Ex.: Entrepreneurial Education")}</label><button class="btn danger small" data-rm="blocks.${i}" aria-label="Remover bloco" style="align-self:flex-end">Remover</button></div>
+      <label class="f">Termos alternativos, um por linha${ta(`blocks.${i}.terms`,5,"entrepreneurial competenc*\nentrepreneurship education")}</label>
+      <span class="note" data-count="${i}">${termsOf(b).length} termo${termsOf(b).length===1?"":"s"} combinados com OR</span></div></div>`).join("");
+    const crit=k=>(p[k]||[]).map((c,i)=>`<div class="crit-wrap"><div class="crit">${inp(`${k}.${i}.c`,"",'code')}<textarea id="f-${k}-${i}-t" data-path="${k}.${i}.t" rows="2" aria-label="Descrição">${esc(c.t)}</textarea><button class="btn danger small" data-rm="${k}.${i}" aria-label="Remover critério">×</button></div>${ruleEditor(k,i,c)}</div>`).join("");
+    $("#ic").innerHTML=crit("ic");$("#ec").innerHTML=crit("ec");
+    $("#sources").innerHTML=(p.sources||[]).map((s,i)=>`<div class="src">
+      <select id="f-sources-${i}-id" data-path="sources.${i}.id" aria-label="Base">${Object.entries(KNOWN_SOURCES).map(([k,v])=>`<option value="${k}" ${k===s.id?"selected":""}>${v}</option>`).join("")}</select>
+      <select id="f-sources-${i}-role" data-path="sources.${i}.role" aria-label="Papel"><option value="main" ${s.role!=="comp"?"selected":""}>Principal</option><option value="comp" ${s.role==="comp"?"selected":""}>Complementar</option></select>
+      <select id="f-sources-${i}-how" data-path="sources.${i}.how" aria-label="Acesso"><option value="api" ${s.how==="api"?"selected":""}>API (pipeline)</option><option value="manual" ${s.how!=="api"?"selected":""}>Exportação</option></select>
+      <input type="date" id="f-sources-${i}-date" data-path="sources.${i}.date" value="${esc(s.date)}" aria-label="Data da busca">
+      <input type="number" id="f-sources-${i}-rep" data-path="sources.${i}.reported" value="${esc(s.reported)}" placeholder="Total" aria-label="Total informado pela base">
+      <button class="btn danger small" data-rm="sources.${i}" aria-label="Remover base">×</button></div>`).join("");
+  }
+  $$("#proto-form [data-path]").forEach(el=>{
+    if(el===document.activeElement||el.closest("#sqs,#blocks,#ic,#ec,#sources"))return;
+    const v=getPath(p,el.dataset.path);
+    if(el.type==="checkbox")el.checked=v!==false&&v!==undefined?!!v:false;else el.value=v??"";
+  });
+  renderProtocolStrings();renderRuleStats();
+  $("#ex-box").hidden=!!(p.title||(p.blocks||[]).some(b=>termsOf(b).length));
+}
+let editingStr=null;
+function renderProtocolStrings(){
+  if(document.activeElement&&$("#strings").contains(document.activeElement)&&document.activeElement.tagName==="TEXTAREA")return;
+  const strs=buildStrings(P());
+  $("#strings").innerHTML=strs.length?strs.map((s,i)=>`<div class="string"><div class="h"><span>${esc(s.label)}${s.role==="comp"?' <span class="pill pend">complementar</span>':""}${s.custom?' <span class="pill may">editada</span>':""}</span><span class="row" style="gap:8px">${s.id!=="generic"?`<button class="link" data-edit="${s.id}">${editingStr===s.id?"Concluir":"Editar"}</button>`:""}${s.custom?`<button class="link" data-reset="${s.id}">Restaurar</button>`:""}<button class="link" data-copy="${i}">Copiar</button></span></div>
+    ${editingStr===s.id?`<textarea class="strta" id="cs-${s.id}" data-cs="${s.id}" rows="7">${esc(s.s)}</textarea>`:`<pre>${esc(s.s)}</pre>`}
+    ${s.notes&&s.notes.length?`<div class="note" style="padding:0 10px 8px">${s.notes.map(esc).join(" ")}</div>`:""}</div>`).join(""):`<div class="empty"><b>Nenhum termo ainda</b>Preencha os blocos da estratégia de busca para montar as strings.</div>`;
+  $$("#strings [data-copy]").forEach(b=>b.onclick=()=>copyText(strs[+b.dataset.copy].s));
+  $$("#strings [data-edit]").forEach(b=>b.onclick=()=>{editingStr=editingStr===b.dataset.edit?null:b.dataset.edit;renderProtocolStrings();$("#cs-"+editingStr)?.focus()});
+  $$("#strings [data-reset]").forEach(b=>b.onclick=()=>{const i=P().sources.findIndex(s=>s.id===b.dataset.reset);if(i>=0){setProto2(`sources.${i}.custom`,"");editingStr=null;renderProtocolStrings()}});
+  $$("#strings [data-cs]").forEach(t=>t.oninput=()=>{const i=P().sources.findIndex(s=>s.id===t.dataset.cs);if(i<0)return;const auto=strs.find(x=>x.id===t.dataset.cs)?.auto;setProto2(`sources.${i}.custom`,t.value.trim()===auto?"":t.value)});
+}
+function protoEvents(){
+  const form=$("#proto-form");
+  const onVal=el=>{
+    const path=el.dataset.path;if(!path)return;
+    let v=el.type==="checkbox"?el.checked:el.value;
+    setProto2(path,v);
+    if(path==="title")renderHeader();
+    if(/^(blocks|fields|docTypes|yearFrom|yearTo|langs|sources)/.test(path))renderProtocolStrings();
+    if(/\.rule\.type$/.test(path)){renderProtocol(true);document.getElementById("f-"+path.replace(/\./g,"-"))?.focus()}
+    if(/\.rule\./.test(path)||/^(blocks|yearFrom|yearTo|langs)/.test(path))scheduleRuleStats();
+    const m=path.match(/^blocks\.(\d+)\.terms$/);if(m){const n=termsOf(P().blocks[+m[1]]).length;const note=form.querySelector(`[data-count="${m[1]}"]`);if(note)note.textContent=n+" termo"+(n===1?"":"s")+" combinados com OR"}
+  };
+  form.addEventListener("input",e=>{if(e.target.type!=="checkbox"&&e.target.tagName!=="SELECT")onVal(e.target)});
+  form.addEventListener("change",e=>{if(e.target.type==="checkbox"||e.target.tagName==="SELECT")onVal(e.target)});
+  form.addEventListener("click",e=>{
+    const b=e.target.closest("button");if(!b)return;
+    if(b.dataset.rm){const[list,idx]=b.dataset.rm.split(".");P()[list].splice(+idx,1);setProto2(list,P()[list]);renderProtocol(true);renderProtocolStrings()}
+    if(b.dataset.add){
+      const list=b.dataset.add,arr=P()[list]||(P()[list]=[]);const n=arr.length+1;
+      const item={sqs:{id:"SQ"+n,label:"",en:"",pt:""},blocks:{name:"",terms:""},ic:{c:"IC"+n,t:""},ec:{c:"EC"+n,t:""},sources:{id:"other",role:"main",how:"manual",date:"",reported:"",custom:""}}[list];
+      arr.push(item);setProto2(list,arr);renderProtocol(true);
+      const focusId={sqs:`f-sqs-${n-1}-label`,blocks:`f-blocks-${n-1}-name`,ic:`f-ic-${n-1}-t`,ec:`f-ec-${n-1}-t`}[list];if(focusId)document.getElementById(focusId)?.focus();
+    }
+  });
+  $("#pm-edit").onclick=()=>{S.pmode="edit";try{localStorage.setItem("bancada-pmode","edit")}catch(e){}renderProtocol(true)};
+  $("#pm-doc").onclick=()=>{S.pmode="doc";try{localStorage.setItem("bancada-pmode","doc")}catch(e){}renderProtocol(true)};
+  $("#load-example").onclick=()=>{S.project.protocol=migrateProtocol(structuredClone(EXAMPLE_PROTOCOL));P().updatedAt=new Date().toISOString();saveProject({protocol:P()},0);renderProtocol(true);renderHeader();toast("Protocolo de exemplo carregado. Edite à vontade.")};
+  $("#exp-config").onclick=()=>download("config.py",buildConfigPy(P()),"text/x-python");
+  $("#exp-pjson").onclick=()=>download("protocolo.json",JSON.stringify({...P(),_gerado:"Bancada PRISMA, "+new Date().toISOString()},null,2),"application/json");
+  $("#exp-counts").onclick=()=>download("initial_search_counts.json",buildCounts(P()),"application/json");
+  const md=()=>download(docFileName("md"),docMD(docModel(P())),"text/markdown");
+  $("#exp-proto").onclick=md;$("#exp-proto2").onclick=md;
+  $("#exp-docx").onclick=exportDocx;$("#exp-docx2").onclick=exportDocx;
+  $("#copy-doc").onclick=()=>copyText(docText(docModel(P())));
+}
+function renderStringsOnly(){renderProtocolStrings()}
+
+function ruleEditor(k,i,c){
+  const r=c.rule||{type:"none"};const base=`${k}.${i}.rule`;
+  const types=Object.entries(RULE_TYPES).map(([v,l])=>`<option value="${v}" ${r.type===v?"selected":""}>${l}</option>`).join("");
+  const fld=["title","abstract","keywords"].map(f=>`<label class="check"><input type="checkbox" id="f-${base.replace(/\./g,"-")}-fields-${f}" data-path="${base}.fields.${f}" ${(r.fields||{title:1,abstract:1,keywords:1})[f]?"checked":""}><span>${FIELD_NAMES[f]}</span></label>`).join("");
+  let params="";
+  if(r.type==="terms")params=`<label class="f">Termos, um por linha (use * para truncar)<textarea id="f-${base.replace(/\./g,"-")}-terms" data-path="${base}.terms" rows="3">${esc(r.terms||"")}</textarea></label><div class="row">${fld}</div>`;
+  if(r.type==="block")params=`<label class="f">Bloco<select id="f-${base.replace(/\./g,"-")}-block" data-path="${base}.block">${(P().blocks||[]).map((b,j)=>`<option value="${j}" ${+(r.block||0)===j?"selected":""}>${j+1}. ${esc(b.name||"Bloco "+(j+1))}</option>`).join("")}</select></label><div class="row">${fld}</div>`;
+  if(r.type==="string")params=`<div class="row">${fld}</div>`;
+  if(r.type==="lang")params=`<label class="f">Idiomas aceitos (vazio = os do protocolo)<input type="text" id="f-${base.replace(/\./g,"-")}-values" data-path="${base}.values" value="${esc(r.values||"")}" placeholder="${esc(P().langs||"English")}"></label>`;
+  if(r.type==="doctype")params=`<label class="f">Tipos aceitos, separados por vírgula<input type="text" id="f-${base.replace(/\./g,"-")}-values" data-path="${base}.values" value="${esc(r.values||"")}" placeholder="article, journal, conference, inproceedings, proceedings paper"></label>`;
+  const how=k==="ic"?"Atende quando":"Se aplica quando";
+  const expl={none:"",year:k==="ic"?"o ano está dentro da janela do protocolo.":"o ano está fora da janela.",lang:k==="ic"?"o idioma está na lista.":"o idioma não está na lista.",doctype:k==="ic"?"o tipo está na lista.":"o tipo não está na lista.",block:"algum termo do bloco aparece nos campos marcados.",string:"todos os blocos têm algum termo nos campos marcados.",terms:"algum termo aparece nos campos marcados."}[r.type||"none"];
+  return`<details class="rule" ${r.type&&r.type!=="none"?"open":""}><summary>Verificação automática: <b>${esc(RULE_TYPES[r.type||"none"])}</b> <span class="rstat" data-rstat="${esc(c.c)}"></span></summary>
+    <div class="rule-body"><label class="f">Tipo de regra<select id="f-${base.replace(/\./g,"-")}-type" data-path="${base}.type">${types}</select></label>${params}${expl?`<p class="note">${how} ${expl} Sem dados suficientes, fica indeterminado.</p>`:'<p class="note">Sem regra: o revisor responde este critério manualmente.</p>'}</div></details>`;
+}
+let ruleStatsT=null;
+function scheduleRuleStats(){clearTimeout(ruleStatsT);ruleStatsT=setTimeout(()=>{derive();renderRuleStats()},500)}
+function renderRuleStats(){
+  if(!F||!F.screen)return;
+  const n=F.screen.length;
+  $$("#proto-form [data-rstat]").forEach(el=>{
+    const code=el.dataset.rstat;if(!n){el.textContent="";return}
+    let y=0,no=0,u=0,any=false;for(const r of F.screen){const e=F.crit[r.k]?.[code];if(!e)continue;any=true;if(e.v==="y")y++;else if(e.v==="n")no++;else u++}
+    if(!any){el.textContent="";return}
+    const kind=critKind(code);
+    el.textContent=` · nos ${fmtN(n)} registros: ${kind==="ic"?"atende":"aplica"} ${fmtN(y)}, ${kind==="ic"?"não atende":"não aplica"} ${fmtN(no)}, indeterminado ${fmtN(u)}`;
+  });
+}
+
+/* exports do protocolo */
+function pyStr(s){return JSON.stringify(String(s??""))}
+function slug(s,i){const v=String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");return v||"bloco_"+(i+1)}
+function buildConfigPy(p){
+  const blocks=(p.blocks||[]).map((b,i)=>`    ${pyStr(slug(b.name,i))}: [\n${termsOf(b).map(t=>"        "+pyStr(t)+",").join("\n")}\n    ],`).join("\n");
+  const crit=list=>(list||[]).filter(c=>c.c).map(c=>`    ${pyStr(c.c)}: ${pyStr(c.t)},`).join("\n");
+  const dbs=(p.sources||[]).filter(s=>s.id&&s.id!=="other").map(s=>{
+    const how=s.how==="api"&&CONNECTOR[s.id]?"api":"manual";
+    const conn=how==="api"?CONNECTOR[s.id]:"exportação -> data/manual_exports/"+(MANUAL_PREFIX[s.id]||s.id)+"_*.bib (ou .csv)";
+    return `    ${pyStr(s.id)}: {"how": ${pyStr(how)}, "key_env": ${KEY_ENV[s.id]&&how==="api"?pyStr(KEY_ENV[s.id]):"None"}, "connector": ${pyStr(conn)}},`;
+  }).join("\n");
+  const lang=(p.langs||"English").split(",")[0].trim().toLowerCase();
+  const code={english:"en",inglês:"en",ingles:"en",portuguese:"pt",português:"pt",spanish:"es",espanhol:"es"}[lang]||lang.slice(0,2);
+  return `"""
+Configuração central da revisão sistemática.
+Gerado pela Bancada PRISMA em ${today()}.
+Revisão: ${String(p.title||"(sem título)").replace(/"""/g,"")}
+
+Este arquivo é a ÚNICA fonte da verdade para a string de busca, a janela
+temporal, o idioma, os critérios e o status das bases. As credenciais de
+API ficam em variáveis de ambiente (ou num arquivo .env). Nunca commite o .env.
+
+Lembre de atualizar os prompts de triagem por LLM em pipeline/06 e 11,
+que descrevem o tema da revisão em linguagem natural.
+"""
+
+import os
+
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
+except ImportError:
+    pass
+
+SPRINGER_API_KEY = os.getenv("SPRINGER_API_KEY", "")
+ELSEVIER_API_KEY = os.getenv("ELSEVIER_API_KEY", "")
+ELSEVIER_INST_TOKEN = os.getenv("ELSEVIER_INST_TOKEN", "")
+IEEE_API_KEY = os.getenv("IEEE_API_KEY", "")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+OPENALEX_MAILTO = os.getenv("OPENALEX_MAILTO", "")
+
+LLM_MODEL = os.getenv("LLM_MODEL", "claude-haiku-4-5-20251001")
+
+
+def require_env(var_name: str) -> str:
+    value = os.getenv(var_name, "")
+    if not value:
+        raise SystemExit(
+            f"Variável de ambiente {var_name} não definida.\\n"
+            f"Copie .env.example para .env e preencha, ou exporte no shell:\\n"
+            f"  export {var_name}=\\"...\\""
+        )
+    return value
+
+
+# Termos de um bloco: OR. Blocos entre si: AND.
+SEARCH_BLOCKS = {
+${blocks}
+}
+
+YEAR_FROM = ${intOr(p.yearFrom)??"None"}
+YEAR_TO = ${intOr(p.yearTo)??"None"}  # None = até a data da busca
+
+LANGUAGE = ${pyStr(code)}
+
+INCLUSION_CRITERIA = {
+${crit(p.ic)}
+}
+
+EXCLUSION_CRITERIA = {
+${crit(p.ec)}
+}
+
+DATABASES = {
+${dbs}
+}
+`;
+}
+function buildCounts(p){const o={_comentario:"Total retornado por cada base na busca inicial. Gerado pela Bancada PRISMA em "+today()+"."};(p.sources||[]).forEach(s=>{if(s.id)o[s.id]=intOr(s.reported)??0});return JSON.stringify(o,null,2)}
+/* ---------- documento do protocolo ---------- */
+function joinPt(list){list=list.filter(Boolean);return list.length>1?list.slice(0,-1).join(", ")+" e "+list[list.length-1]:(list[0]||"")}
+function paras(text){return String(text||"").split(/\n\s*\n/).map(s=>s.trim()).filter(Boolean)}
+function docModel(p){
+  const M=[];const R=(text,o={})=>({text:String(text??""),...o});
+  M.push({t:"title",text:"Protocolo de Revisão da Literatura"});
+  M.push({t:"p",runs:[R("Título: ",{b:1}),R(p.title||"(sem título)",{i:1})]});
+  M.push({t:"h",text:"1. Objetivos e Questões de Pesquisa (Research Questions)"});
+  paras(p.objective).forEach(x=>M.push({t:"p",runs:[R(x)]}));
+  if((p.logic||"").trim()){M.push({t:"p",runs:[R("A ideia é seguir a lógica:")]});M.push({t:"p",runs:[R(p.logic.trim(),{b:1})]})}
+  if((p.rqIntro||"").trim())M.push({t:"p",runs:[R(p.rqIntro.trim())]});
+  const qcell=(label,en,pt)=>[label?[R(label,{b:1})]:null,en?[R(en)]:null,pt?[R("("+pt+")",{i:1})]:null].filter(Boolean);
+  const rows=[[[[R("GQ",{b:1})]],qcell(p.gq?.label||"General Question",p.gq?.en,p.gq?.pt)]];
+  (p.sqs||[]).forEach((s,i)=>rows.push([[[R(s.id||"SQ"+(i+1),{b:1})]],qcell(s.label,s.en,s.pt)]));
+  M.push({t:"table",widths:[14,86],head:["ID","Questão de Pesquisa (Research Question)"],rows});
+  M.push({t:"h",text:"2. Estratégia de Busca (Search String)"});
+  paras(p.searchIntro).forEach(x=>M.push({t:"p",runs:[R(x)]}));
+  const B=(p.blocks||[]).filter(b=>termsOf(b).length);
+  if(B.length){
+    M.push({t:"p",runs:[R("Estrutura da String:",{b:1})]});
+    M.push({t:"table",widths:[28,72],head:["Major terms","Alternative terms"],rows:B.map((b,i)=>[[[R(b.name||"Bloco "+(i+1))]],[[R("( "+termsOf(b).map(q).join(" OR ")+" )"+(i<B.length-1?" AND":""))]]])});
+    const strs=buildStrings(p).filter(s=>s.id!=="generic");
+    if(strs.length){
+      M.push({t:"h2",text:"2.1 String por base de dados"});
+      strs.forEach(s=>{M.push({t:"p",runs:[R(s.label,{b:1}),R(s.role==="comp"?" (complementar)":"")]});M.push({t:"code",text:s.s});if(s.notes&&s.notes.length)M.push({t:"small",text:s.notes.join(" ")})});
+    }
+  }
+  M.push({t:"h",text:"3. Fontes de Informação e Parâmetros (Information Sources)"});
+  const src=p.sources||[];const nm=id=>KNOWN_SOURCES[id]||id;
+  const main=src.filter(s=>s.role!=="comp").map(s=>nm(s.id)),comp=src.filter(s=>s.role==="comp").map(s=>nm(s.id));
+  const fsEn={title:"Title",abstract:"Abstract",keywords:"Keywords"};const fl=fieldList(p);
+  const items=[];
+  if(main.length)items.push({runs:[R("Bases de Dados Selecionadas: ",{b:1}),R(joinPt(main)+".")]});
+  if(comp.length)items.push({runs:[R("Bases de Dados Complementares: ",{b:1}),R(joinPt(comp)+((p.compPurpose||"").trim()?" "+p.compPurpose.trim().replace(/\.$/,""):"")+".")]});
+  items.push({runs:[R("Campos de Busca: ",{b:1}),R(fieldsLabel(p)+" ("),R(fl.map(f=>fsEn[f]).join(fl.length>2?", ":" and ").replace(/, ([^,]+)$/," and $1"),{i:1}),R(").")]});
+  if((p.docTypesText||"").trim())items.push({runs:[R("Tipo de Documento: ",{b:1}),R(p.docTypesText.trim())]});
+  const yf=intOr(p.yearFrom),yt=intOr(p.yearTo);
+  if(yf||yt)items.push({runs:[R("Período: ",{b:1}),R(yf&&yt?`de ${yf} a ${yt}.`:yf?`de ${yf} até a data da busca.`:`até ${yt}.`)]});
+  if((p.langs||"").trim())items.push({runs:[R("Idioma: ",{b:1}),R(p.langs.trim()+".")]});
+  const dated=src.filter(s=>s.date||s.reported);
+  if(dated.length)items.push({runs:[R("Execução da busca: ",{b:1}),R(dated.map(s=>nm(s.id)+(s.date?" em "+new Date(s.date+"T12:00").toLocaleDateString("pt-BR"):"")+(s.reported?" ("+fmtN(intOr(s.reported))+" registros)":"")).join("; ")+".")]});
+  M.push({t:"ul",items});
+  M.push({t:"h",text:"4. Critérios de Elegibilidade (Eligibility Criteria)"});
+  const ruleDesc=(c,kind)=>{const r=c.rule;if(!r||!r.type||r.type==="none")return"";const fs=ruleFields(r).map(f=>FIELD_NAMES[f]).join(", ");const d={year:"ano dentro da janela",lang:"idioma aceito",doctype:"tipo de documento ("+(r.values||"artigo de periódico ou conferência")+")",block:"termos do bloco “"+((P2.blocks||[])[+r.block||0]?.name||"")+"” em "+fs,string:"todos os blocos da string em "+fs,terms:"termos ("+(r.terms||"").split(/\n|;/).map(s=>s.trim()).filter(Boolean).slice(0,6).join(", ")+") em "+fs}[r.type];return d?" Pré-avaliação automática: "+d+".":""};
+  const P2=p;const crit=(list,kind)=>(list||[]).filter(c=>c.c||c.t).map(c=>({runs:[R("("+c.c+"): ",{b:1}),R(c.t),R(ruleDesc(c,kind),{i:1})]}));
+  M.push({t:"ul",items:[{runs:[R("Critérios de Inclusão (IC):",{b:1})],children:crit(p.ic,"ic")},{runs:[R("Critérios de Exclusão (EC):",{b:1})],children:crit(p.ec,"ec")}]});
+  M.push({t:"h",text:"5. Seleção e Extração de Dados"});
+  M.push({t:"p",runs:[R("O gerenciamento e a triagem dos dados seguirão o fluxograma PRISMA 2020.")]});
+  let ol=null;
+  String(p.selection||"").split(/\n/).map(s=>s.trim()).filter(Boolean).forEach(line=>{
+    const m=line.match(/^\d+[.)]\s*(.*)$/);
+    const runsOf=txt=>{const c=txt.match(/^([^:]{2,70}):\s*(.*)$/);return c?[R(c[1]+": ",{b:1}),R(c[2])]:[R(txt)]};
+    if(m){if(!ol){ol={t:"ol",items:[]};M.push(ol)}ol.items.push({runs:runsOf(m[1])})}else{ol=null;M.push({t:"p",runs:runsOf(line)})}
+  });
+  const cb=(p.sqs||[]).filter(s=>parseCodes(s.codes).length);
+  if(cb.length){
+    M.push({t:"h2",text:"5.1 Livro de códigos da extração"});
+    M.push({t:"p",runs:[R("As categorias abaixo orientam a codificação de cada questão secundária. A ferramenta sugere categorias a partir de título, resumo e palavras-chave, e o revisor aceita, recusa ou acrescenta categorias.")]});
+    M.push({t:"table",widths:[18,82],head:["Questão","Categorias (termos indicadores)"],rows:cb.map((s,i)=>[[[R(s.id||"SQ",{b:1})],...(s.label?[[R(s.label)]]:[])],parseCodes(s.codes).map(c=>[R(c.cat+": ",{b:1}),R(c.terms.join("; "))])])});
+  }
+  M.push({t:"meta",text:"Versão de "+(p.updatedAt?new Date(p.updatedAt).toLocaleDateString("pt-BR"):new Date().toLocaleDateString("pt-BR"))+", gerada pela Bancada PRISMA."});
+  return M;
+}
+function runsHTML(runs){return runs.map(r=>{let h=esc(r.text);if(r.i)h="<em>"+h+"</em>";if(r.b)h="<strong>"+h+"</strong>";return h}).join("")}
+function docHTML(M){
+  const li=it=>`<li>${runsHTML(it.runs)}${it.children&&it.children.length?`<ul>${it.children.map(li).join("")}</ul>`:""}</li>`;
+  return M.map(n=>{
+    switch(n.t){
+      case"title":return`<h1>${esc(n.text)}</h1>`;
+      case"h":return`<h2>${esc(n.text)}</h2>`;
+      case"h2":return`<h3>${esc(n.text)}</h3>`;
+      case"p":return`<p>${runsHTML(n.runs)}</p>`;
+      case"small":return`<p class="small">${esc(n.text)}</p>`;
+      case"code":return`<pre>${esc(n.text)}</pre>`;
+      case"meta":return`<p class="meta">${esc(n.text)}</p>`;
+      case"ul":return`<ul>${n.items.map(li).join("")}</ul>`;
+      case"ol":return`<ol>${n.items.map(li).join("")}</ol>`;
+      case"table":return`<div class="tw"><table><colgroup>${n.widths.map(w=>`<col style="width:${w}%">`).join("")}</colgroup><thead><tr>${n.head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${n.rows.map(r=>`<tr>${r.map(cell=>`<td>${cell.map(pp=>`<p>${runsHTML(pp)}</p>`).join("")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    }return"";
+  }).join("");
+}
+function runsMD(runs){return runs.map(r=>{let t=r.text;if(!t.trim())return t;const lead=t.match(/^\s*/)[0],trail=t.match(/\s*$/)[0];t=t.trim();if(r.i)t="*"+t+"*";if(r.b)t="**"+t+"**";return lead+t+trail}).join("")}
+function docMD(M){
+  const li=(it,d=0,n)=>"  ".repeat(d)+(n?n+". ":"- ")+runsMD(it.runs)+(it.children||[]).map(c=>"\n"+li(c,d+1)).join("");
+  return M.map(n=>{
+    switch(n.t){
+      case"title":return"# "+n.text;case"h":return"## "+n.text;case"h2":return"### "+n.text;
+      case"p":return runsMD(n.runs);case"small":return"*"+n.text+"*";case"meta":return"---\n*"+n.text+"*";
+      case"code":return"```\n"+n.text+"\n```";
+      case"ul":return n.items.map(it=>li(it)).join("\n");
+      case"ol":return n.items.map((it,i)=>li(it,0,i+1)).join("\n");
+      case"table":return"| "+n.head.join(" | ")+" |\n|"+n.head.map(()=>"---").join("|")+"|\n"+n.rows.map(r=>"| "+r.map(cell=>cell.map(runsMD).join("<br>").replace(/\|/g,"\\|")).join(" | ")+" |").join("\n");
+    }return"";
+  }).join("\n\n")+"\n";
+}
+function docText(M){
+  const rt=runs=>runs.map(r=>r.text).join("");
+  const li=(it,d=0,n)=>"   ".repeat(d)+(n?n+". ":"• ")+rt(it.runs)+(it.children||[]).map(c=>"\n"+li(c,d+1)).join("");
+  return M.map(n=>{
+    switch(n.t){
+      case"title":case"h":case"h2":case"small":case"code":case"meta":return n.text;
+      case"p":return rt(n.runs);
+      case"ul":return n.items.map(it=>li(it)).join("\n");
+      case"ol":return n.items.map((it,i)=>li(it,0,i+1)).join("\n");
+      case"table":return[n.head.join("\t"),...n.rows.map(r=>r.map(cell=>cell.map(rt).join(" ")).join("\t"))].join("\n");
+    }return"";
+  }).join("\n\n");
+}
+function buildDocx(D,M){
+  const FONT="Arial";
+  const tr=r=>new D.TextRun({text:r.text,bold:!!r.b,italics:!!r.i,font:FONT,size:22});
+  const para=(runs,o={})=>new D.Paragraph({children:runs.map(tr),spacing:{after:120,line:276},...o});
+  const border={style:D.BorderStyle.SINGLE,size:4,color:"000000"};
+  const borders={top:border,bottom:border,left:border,right:border};
+  const children=[];let olInst=0;
+  const listItems=(items,ref,level,inst)=>{for(const it of items){children.push(new D.Paragraph({children:it.runs.map(tr),numbering:{reference:ref,level,...(inst!=null?{instance:inst}:{})},spacing:{after:80,line:276}}));if(it.children&&it.children.length)listItems(it.children,ref,level+1,inst)}};
+  for(const n of M){
+    if(n.t==="title")children.push(new D.Paragraph({children:[new D.TextRun({text:n.text,bold:true,font:FONT,size:26})],spacing:{after:320}}));
+    else if(n.t==="h")children.push(new D.Paragraph({children:[new D.TextRun({text:n.text,bold:true,font:FONT,size:22})],spacing:{before:320,after:120}}));
+    else if(n.t==="h2")children.push(new D.Paragraph({children:[new D.TextRun({text:n.text,bold:true,font:FONT,size:22})],spacing:{before:200,after:100}}));
+    else if(n.t==="p")children.push(para(n.runs,{alignment:D.AlignmentType.JUSTIFIED}));
+    else if(n.t==="small")children.push(new D.Paragraph({children:[new D.TextRun({text:n.text,italics:true,font:FONT,size:18,color:"555555"})],spacing:{after:160}}));
+    else if(n.t==="meta")children.push(new D.Paragraph({children:[new D.TextRun({text:n.text,italics:true,font:FONT,size:18,color:"777777"})],spacing:{before:400}}));
+    else if(n.t==="code")children.push(new D.Paragraph({children:[new D.TextRun({text:n.text,font:"Courier New",size:18})],shading:{type:D.ShadingType.CLEAR,fill:"F2F2F2",color:"auto"},border:{top:{style:D.BorderStyle.SINGLE,size:2,color:"CCCCCC",space:4},bottom:{style:D.BorderStyle.SINGLE,size:2,color:"CCCCCC",space:4},left:{style:D.BorderStyle.SINGLE,size:2,color:"CCCCCC",space:4},right:{style:D.BorderStyle.SINGLE,size:2,color:"CCCCCC",space:4}},spacing:{after:80}}));
+    else if(n.t==="ul")listItems(n.items,"bullets",0);
+    else if(n.t==="ol"){olInst++;listItems(n.items,"numbers",0,olInst)}
+    else if(n.t==="table"){
+      const total=9026;const w=n.widths.map(x=>Math.round(total*x/100));
+      const cell=(paras,i,head)=>new D.TableCell({borders,width:{size:w[i],type:D.WidthType.DXA},margins:{top:80,bottom:80,left:110,right:110},
+        children:head?[new D.Paragraph({children:[new D.TextRun({text:paras,bold:true,font:FONT,size:22})]})]:paras.map(pp=>new D.Paragraph({children:pp.map(tr),spacing:{after:40}}))});
+      children.push(new D.Table({width:{size:total,type:D.WidthType.DXA},columnWidths:w,rows:[new D.TableRow({tableHeader:true,children:n.head.map((h,i)=>cell(h,i,true))}),...n.rows.map(r=>new D.TableRow({cantSplit:true,children:r.map((c,i)=>cell(c,i,false))}))]}));
+      children.push(new D.Paragraph({children:[],spacing:{after:120}}));
+    }
+  }
+  return new D.Document({
+    creator:"Bancada PRISMA",title:"Protocolo de Revisão da Literatura",
+    styles:{default:{document:{run:{font:FONT,size:22}}}},
+    numbering:{config:[
+      {reference:"bullets",levels:[{level:0,format:D.LevelFormat.BULLET,text:"●",alignment:D.AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}},{level:1,format:D.LevelFormat.BULLET,text:"○",alignment:D.AlignmentType.LEFT,style:{paragraph:{indent:{left:1440,hanging:360}}}},{level:2,format:D.LevelFormat.BULLET,text:"■",alignment:D.AlignmentType.LEFT,style:{paragraph:{indent:{left:2160,hanging:360}}}}]},
+      {reference:"numbers",levels:[{level:0,format:D.LevelFormat.DECIMAL,text:"%1.",alignment:D.AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}]}
+    ]},
+    sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children}]
+  });
+}
+function docFileName(ext){const t=slug(P().title||"protocolo",0).slice(0,60);return"protocolo_"+t+"_"+today()+"."+ext}
+let docxLib=null;
+function loadDocxLib(){
+  if(window.docx)return Promise.resolve(window.docx);
+  if(docxLib)return docxLib;
+  docxLib=new Promise((res,rej)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js";s.onload=()=>window.docx?res(window.docx):rej(new Error("docx"));s.onerror=()=>{docxLib=null;rej(new Error("docx"))};document.head.appendChild(s)});
+  return docxLib;
+}
+async function exportDocx(){
+  try{const D=await loadDocxLib();const blob=await D.Packer.toBlob(buildDocx(D,docModel(P())));downloadBlob(docFileName("docx"),blob)}
+  catch(e){toast("Não foi possível gerar o Word agora. Baixe em Markdown ou copie o texto.")}
+}
+
+/* ---------- importação ---------- */
+let staged=[];
+function importEvents(){
+  const drop=$("#drop");
+  ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
+  drop.addEventListener("drop",e=>stageFiles(e.dataTransfer.files));
+  $("#file").addEventListener("change",e=>{stageFiles(e.target.files);e.target.value=""});
+}
+async function stageFiles(files){
+  for(const f of files){
+    try{const text=await f.text();const res=parseFile(f.name,text);
+      staged.push({id:uid(),name:f.name,fmt:res.fmt,records:res.records,hasSource:res.hasSource,source:res.hasSource?"__col":(res.guess||(P().sources[0]?.id)||"other"),error:res.error||(!res.records.length?"Nenhum registro reconhecido neste arquivo.":"")});
+    }catch(e){staged.push({id:uid(),name:f.name,fmt:"?",records:[],error:"Não foi possível ler o arquivo."})}
+  }
+  renderImport();
+}
+const FMT={bib:"BibTeX",ris:"RIS",wos:"Web of Science (texto)",csv:"CSV/TSV"};
+function srcOptions(sel,withCol){
+  const ids=[...new Set([...(P().sources||[]).map(s=>s.id),...Object.keys(KNOWN_SOURCES)])];
+  return(withCol?`<option value="__col" ${sel==="__col"?"selected":""}>Usar a coluna source_db</option>`:"")+ids.map(id=>`<option value="${id}" ${id===sel?"selected":""}>${esc(KNOWN_SOURCES[id]||id)}</option>`).join("");
+}
+function renderImport(){
+  $("#staged").innerHTML=staged.length?`<div class="tbl"><table><thead><tr><th>Arquivo</th><th>Formato</th><th class="num">Registros</th><th class="num">Com resumo</th><th>Base</th><th></th></tr></thead><tbody>${
+    staged.map(s=>`<tr><td>${esc(s.name)}${s.error?`<div class="note" style="color:var(--stop)">${esc(s.error)}</div>`:""}</td><td>${FMT[s.fmt]||s.fmt}</td><td class="num">${fmtN(s.records.length)}</td><td class="num">${fmtN(s.records.filter(r=>r.ab).length)}</td>
+    <td><select id="st-${s.id}" data-st="${s.id}" aria-label="Base de origem">${srcOptions(s.source,s.hasSource)}</select></td><td><button class="btn danger small" data-unst="${s.id}">Descartar</button></td></tr>`).join("")
+  }</tbody></table></div><div class="row"><button class="btn" id="do-import" ${!S.canWrite||S.mode!=="db"||!staged.some(s=>s.records.length)?"disabled":""}>Importar ${fmtN(staged.reduce((a,s)=>a+s.records.length,0))} registros</button><span class="note" id="imp-prog"></span></div>`:"";
+  $$("#staged [data-st]").forEach(el=>el.onchange=()=>{staged.find(s=>s.id===el.dataset.st).source=el.value});
+  $$("#staged [data-unst]").forEach(b=>b.onclick=()=>{staged=staged.filter(s=>s.id!==b.dataset.unst);renderImport()});
+  const di=$("#do-import");if(di)di.onclick=doImport;
+
+  const per={};for(const r of F.recs){(per[r.src]??=({n:0,ab:0,dup:0,auto:0}));per[r.src].n++;if(r.ab)per[r.src].ab++;if(F.dupOf[r.k])per[r.src].dup++;else if(F.auto[r.k])per[r.src].auto++}
+  const srcs=[...new Set([...(P().sources||[]).map(s=>s.id),...Object.keys(per)])];
+  const rows=srcs.map(id=>{const s=(P().sources||[]).find(x=>x.id===id)||{};const p=per[id]||{n:0,ab:0,dup:0,auto:0};const rep=intOr(s.reported);
+    const diff=rep!=null&&p.n&&rep!==p.n?`<span class="pill ${Math.abs(rep-p.n)/rep>0.02?"conf":"may"}">${p.n>rep?"+":""}${fmtN(p.n-rep)}</span>`:"";
+    return`<tr><td>${esc(KNOWN_SOURCES[id]||id)}</td><td class="num">${rep!=null?fmtN(rep):"—"}</td><td class="num">${fmtN(p.n)} ${diff}</td><td class="num">${p.n?Math.round(p.ab/p.n*100)+"%":"—"}</td><td class="num">${fmtN(p.dup)}</td><td class="num">${fmtN(p.auto)}</td></tr>`}).join("");
+  $("#per-base").innerHTML=F.recs.length||srcs.length?`<div class="tbl"><table><thead><tr><th>Base</th><th class="num">Informado</th><th class="num">Importado</th><th class="num">Com resumo</th><th class="num">Duplicados</th><th class="num">Filtro automático</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>Total</td><td class="num">${fmtN((P().sources||[]).reduce((a,s)=>a+(intOr(s.reported)||0),0))}</td><td class="num">${fmtN(F.recs.length)}</td><td></td><td class="num">${fmtN(Object.keys(F.dupOf).length)}</td><td class="num">${fmtN(Object.keys(F.auto).length)}</td></tr></tfoot></table></div>`:"";
+  const imps=S.project.imports||[];
+  $("#imports").innerHTML=imps.length?`<div class="tbl"><table><thead><tr><th>Arquivo</th><th>Base</th><th>Data</th><th class="num">Registros</th><th></th></tr></thead><tbody>${
+    imps.map(i=>`<tr><td>${esc(i.file)}</td><td>${esc(i.source==="__col"?"várias (source_db)":KNOWN_SOURCES[i.source]||i.source)}</td><td class="mono">${esc(i.date)}</td><td class="num">${fmtN(i.count)}</td><td>${confirmRm===i.id?`<button class="btn danger small" data-rmi="${i.id}">Confirmar remoção</button> <button class="link" data-cancel="1">cancelar</button>`:`<button class="link" data-ask="${i.id}" ${S.canWrite?"":"disabled"}>Remover</button>`}</td></tr>`).join("")
+  }</tbody></table></div>`:`<div class="empty"><b>Nenhum arquivo importado</b>Exporte os resultados de cada base e solte os arquivos acima. Os registros entram na triagem depois de passar pelos filtros e pela remoção de duplicatas.</div>`;
+  $$("#imports [data-ask]").forEach(b=>b.onclick=()=>{confirmRm=b.dataset.ask;renderImport()});
+  $$("#imports [data-cancel]").forEach(b=>b.onclick=()=>{confirmRm=null;renderImport()});
+  $$("#imports [data-rmi]").forEach(b=>b.onclick=()=>removeImport(b.dataset.rmi));
+}
+let confirmRm=null;
+async function doImport(){
+  const btn=$("#do-import");btn.disabled=true;
+  const todo=staged.filter(s=>s.records.length);let done=0,total=todo.reduce((a,s)=>a+s.records.length,0);
+  for(const s of todo){
+    const impId=uid();const items=s.records.map(r=>{const o={t:r.t,a:r.a,y:r.y,v:r.v,doi:r.doi,ab:r.ab,u:r.u,ty:r.ty,lg:r.lg,pg:r.pg,kw:(r.kw||"").slice(0,400)};if(s.source==="__col")o.src=r.src||"other";for(const k in o)if(o[k]===""||o[k]==null)delete o[k];return o});
+    const chunks=chunkRecords(items);const ids=[];
+    try{
+      for(let i=0;i<chunks.length;i++){const cid=impId+"-"+i;await db.doc("records/"+cid).set({imp:impId,items:chunks[i]});ids.push(cid);done+=chunks[i].length;$("#imp-prog").textContent=`Enviando… ${fmtN(done)} de ${fmtN(total)}`}
+    }catch(e){
+      for(const cid of ids){try{await db.doc("records/"+cid).delete()}catch(_){}}
+      $("#imp-prog").textContent=e&&e.code==="quota_exceeded"?"O armazenamento está cheio. Remova importações antigas e tente de novo.":"A importação de "+s.name+" falhou e foi desfeita. Tente de novo.";
+      btn.disabled=false;return;
+    }
+    const meta={id:impId,file:s.name,source:s.source,fmt:s.fmt,date:today(),count:items.length,chunks:ids};
+    S.project.imports=[...(S.project.imports||[]),meta];
+    queue("project/main",{imports:S.project.imports},"update");
+    staged=staged.filter(x=>x!==s);
+  }
+  toast("Importação concluída: "+fmtN(total)+" registros.");
+  renderImport();
+}
+async function removeImport(id){
+  const imp=S.project.imports.find(i=>i.id===id);if(!imp)return;confirmRm=null;
+  S.project.imports=S.project.imports.filter(i=>i.id!==id);queue("project/main",{imports:S.project.imports},"update");
+  for(const cid of imp.chunks||[])queue("records/"+cid,null);
+  toast("Arquivo removido. As decisões já feitas nesses registros deixam de contar.");
+  scheduleDerive();
+}
+
+/* ---------- triagem ---------- */
+const DLABEL={inc:"Incluir",may:"Talvez",exc:"Excluir",nr:"Não recuperado"};
+const SLABEL={inc:"Incluído",exc:"Excluído",nr:"Não recuperado",conf:"Conflito",pend:"Pendente",may:"Talvez"};
+function highlight(text){
+  let h=esc(text);if(!text)return h;
+  (P().blocks||[]).forEach((b,i)=>{
+    const terms=termsOf(b).filter(t=>t.replace(/\*/g,"").length>2).sort((a,b)=>b.length-a.length);
+    if(!terms.length)return;
+    const re=new RegExp("(?<![\\w>])("+terms.map(t=>esc(t).replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/\\\*/g,"\\w*")).join("|")+")(?![\\w<])","gi");
+    h=h.replace(/(<[^>]+>)|([^<]+)/g,(m,tag,txt)=>tag?tag:txt.replace(re,`<mark class="b${i%4}">$1</mark>`));
+  });
+  return h;
+}
+function queueFor(stage){
+  const pool=stage==="ta"?F.screen:F.ftPool;const st=stage==="ta"?F.ta:F.ft;const f=S.filter[stage];const me=S.me;
+  const qtxt=S.search[stage].trim().toLowerCase();
+  const sug=f.startsWith("sug:")?f.slice(4):null;
+  return pool.filter(r=>{
+    const s=st[r.k].s;
+    if((f==="mine"||sug)&&(S.votes[stage][me]?.[r.k]))return false;
+    if(sug&&!autoExcludes(r.k,sug))return false;
+    if(f==="pend"&&s!=="pend")return false;
+    if(f==="conf"&&s!=="conf")return false;
+    if(f==="inc"&&s!=="inc")return false;
+    if(f==="exc"&&s!=="exc"&&s!=="nr")return false;
+    if(qtxt&&!((r.t||"")+" "+(r.a||"")+" "+(r.doi||"")).toLowerCase().includes(qtxt))return false;
+    return true;
+  });
+}
+function autoExcludes(k,code){const e=F.crit[k]?.[code];if(!e)return false;return code.startsWith("IC")||(P().ic||[]).some(c=>c.c===code)?e.v==="n":e.v==="y"}
+function critKind(code){return(P().ic||[]).some(c=>c.c===code)?"ic":"ec"}
+function bulkHTML(stage){
+  if(!myRole())return"";
+  const pend=(stage==="ta"?F.screen:F.ftPool).filter(r=>!S.votes[stage][S.me]?.[r.k]);
+  const rows=[...(P().ic||[]),...(P().ec||[])].filter(c=>c.c&&c.rule&&c.rule.type&&c.rule.type!=="none").map(c=>({c,n:pend.filter(r=>autoExcludes(r.k,c.c)).length})).filter(x=>x.n);
+  if(!rows.length)return"";
+  return`<div class="panel"><header><h2>Exclusões sugeridas pelas regras</h2><p>Registros pendentes para você em que uma regra automática indica exclusão. Revise a lista antes de aceitar em lote; cada aceite vira uma decisão sua, com o critério como motivo.</p></header>
+    <div class="bulk">${rows.map(x=>`<div class="bulk-row"><span class="mono">${esc(x.c.c)}</span><span class="bt">${esc(x.c.t||RULE_TYPES[x.c.rule.type])}<small>${critKind(x.c.c)==="ic"?"não atende":"se aplica"} · ${esc(RULE_TYPES[x.c.rule.type])}</small></span><b class="mono">${fmtN(x.n)}</b><button class="btn ghost small" data-sugf="${esc(x.c.c)}">Revisar lista</button></div>`).join("")}</div></div>`;
+}
+function bulkBarHTML(stage,qlist){
+  const f=S.filter[stage];if(!f.startsWith("sug:")||!qlist.length)return"";
+  const code=f.slice(4);
+  return`<div class="callout warn row" style="justify-content:space-between"><span>${fmtN(qlist.length)} registros nesta lista têm exclusão sugerida por <b>${esc(code)}</b>. Passe pelos títulos antes de aceitar.</span>${
+    bulkConfirm===code?`<span class="row"><button class="btn danger small" data-bulkok="${esc(code)}">Confirmar ${fmtN(qlist.length)} exclusões</button><button class="link" data-bulkno="1">cancelar</button></span>`:`<button class="btn small" data-bulk="${esc(code)}">Aceitar todas por ${esc(code)}</button>`}</div>`;
+}
+let bulkConfirm=null;
+function bulkAccept(stage,code){
+  const ql=queueFor(stage);if(!ql.length)return;
+  const docs=(S.voteDocs[stage][S.me]??={});const touched=new Set();
+  for(const r of ql){const cid=chunkOf(r.k);if(!touched.has(cid)){docs[cid]={...(docs[cid]||{})};touched.add(cid)}
+    const v={d:"exc",r:code,cr:{[code]:F.crit[r.k][code].v},bulk:1};docs[cid][r.k]=v;(S.votes[stage][S.me]??={})[r.k]=v}
+  touched.forEach(cid=>queue("votes/"+S.me+"/"+stage+"/"+cid,{m:docs[cid]}));
+  bulkConfirm=null;S.filter[stage]="mine";S.cur[stage]=null;derive();toast(fmtN(ql.length)+" exclusões registradas por "+code+".");renderBadges();renderScreen(stage);
+}
+function renderScreen(stage){
+  const el=$("#v-"+stage);const role=myRole();const isTA=stage==="ta";
+  const pool=isTA?F.screen:F.ftPool;const st=isTA?F.ta:F.ft;
+  const cnt={pend:0,conf:0,inc:0,exc:0,nr:0};pool.forEach(r=>cnt[st[r.k].s]=(cnt[st[r.k].s]||0)+1);
+  const mine=S.me?pool.filter(r=>S.votes[stage][S.me]?.[r.k]).length:0;
+  const mode=+P().reviewers===1?1:2;
+  const head=`<div class="panel"><header><h2>${isTA?"Triagem de títulos e resumos":"Elegibilidade (leitura completa)"}</h2><p>${isTA?"Para cada critério, aceite ou corrija a pré-avaliação. A decisão sugerida sai das suas respostas; talvez segue para a próxima etapa.":"Confirme os critérios lendo o artigo completo ou, se não houver acesso, o resumo e os metadados. Cada exclusão leva o critério como motivo."}</p></header>
+    ${renderTeamHTML()}
+    <div class="stats">
+      <span class="stat"><b>${fmtN(pool.length)}</b> registros</span>
+      ${role?`<span class="stat"><b>${fmtN(mine)}</b> decididos por você</span>`:""}
+      <span class="stat"><b>${fmtN(cnt.pend||0)}</b> pendentes</span>
+      ${mode===2?`<span class="stat ${cnt.conf?"warn":""}"><b>${fmtN(cnt.conf||0)}</b> conflitos</span>`:""}
+      <span class="stat ok"><b>${fmtN(cnt.inc||0)}</b> incluídos</span>
+      <span class="stat stop"><b>${fmtN((cnt.exc||0)+(cnt.nr||0))}</b> excluídos</span>
+    </div>
+    <div class="bar" title="Decididos"><span style="width:${pool.length?((pool.length-(cnt.pend||0)-(cnt.conf||0))/pool.length*100):0}%"></span></div></div>`;
+  if(!pool.length){
+    el.innerHTML=head+`<div class="empty"><b>${isTA?"Nada para triar ainda":"Nenhum registro chegou a esta etapa"}</b>${isTA?"Importe as exportações das bases ou os CSVs do pipeline na aba Busca e importação. Os registros aparecem aqui depois da remoção de duplicatas e dos filtros automáticos.":"Os registros incluídos (ou marcados como talvez) na triagem de títulos e resumos aparecem aqui."}</div>`;
+    bindTeam();return;
+  }
+  const qlist=queueFor(stage);
+  let cur=S.cur[stage];if(!cur||!qlist.some(r=>r.k===cur)){cur=qlist[0]?.k||null;S.cur[stage]=cur}
+  const idx=qlist.findIndex(r=>r.k===cur);
+  const auto=[...(P().ic||[]),...(P().ec||[])].filter(c=>c.c&&c.rule&&c.rule.type&&c.rule.type!=="none");
+  const filters=[["mine","Pendentes para mim"],["pend","Sem decisão final"],...(mode===2?[["conf","Conflitos"]]:[]),["inc","Incluídos"],["exc","Excluídos"],["all","Todos"],...auto.map(c=>["sug:"+c.c,"Sugestão de exclusão: "+c.c])];
+  const qbar=`<div class="qbar"><select id="flt-${stage}" aria-label="Fila">${filters.map(([v,l])=>`<option value="${esc(v)}" ${S.filter[stage]===v?"selected":""}>${esc(l)}</option>`).join("")}</select>
+    <input type="search" id="srch-${stage}" placeholder="Buscar por título, autor ou DOI" value="${esc(S.search[stage])}">
+    <span class="note mono">${qlist.length?(idx+1)+" / "+fmtN(qlist.length):"0"}</span></div>`;
+  const body=cur?cardHTML(F.byK[cur],stage):`<div class="empty"><b>${S.filter[stage]==="mine"?"Você decidiu todos os registros desta fila":"Nenhum registro neste filtro"}</b>${S.filter[stage]==="mine"&&mode===2&&cnt.conf?"Há conflitos para resolver. Escolha Conflitos no filtro acima.":"Escolha outro filtro para revisar decisões."}</div>`;
+  const list=`<div class="list" role="listbox" aria-label="Registros">${qlist.slice(0,400).map(r=>`<button class="li" data-go="${r.k}" aria-current="${r.k===cur}"><span><span class="lt">${esc(r.t)}</span><span class="lm">${esc(r.y||"")} · ${esc(KNOWN_SOURCES[r.src]||r.src)}</span></span>${pillHTML(st[r.k])}</button>`).join("")}</div>${qlist.length>400?`<p class="note">Mostrando 400 de ${fmtN(qlist.length)}. Use a busca para encontrar outros.</p>`:""}`;
+  el.innerHTML=head+bulkHTML(stage)+`<div class="panel">${qbar}${bulkBarHTML(stage,qlist)}<div class="ftlay"><div class="qlist">${list}</div><div>${body}</div></div></div>`+(isTA?aiPanelHTML():"");
+  $$(`#v-${stage} [data-go]`).forEach(b=>b.onclick=()=>{S.cur[stage]=b.dataset.go;renderScreen(stage)});
+  $$(`#v-${stage} [data-sugf]`).forEach(b=>b.onclick=()=>{S.filter[stage]="sug:"+b.dataset.sugf;S.cur[stage]=null;bulkConfirm=null;renderScreen(stage)});
+  $$(`#v-${stage} [data-bulk]`).forEach(b=>b.onclick=()=>{bulkConfirm=b.dataset.bulk;renderScreen(stage)});
+  $$(`#v-${stage} [data-bulkno]`).forEach(b=>b.onclick=()=>{bulkConfirm=null;renderScreen(stage)});
+  $$(`#v-${stage} [data-bulkok]`).forEach(b=>b.onclick=()=>bulkAccept(stage,b.dataset.bulkok));
+  bindTeam();
+  $("#flt-"+stage).onchange=e=>{S.filter[stage]=e.target.value;S.cur[stage]=null;bulkConfirm=null;renderScreen(stage)};
+  const sr=$("#srch-"+stage);sr.oninput=e=>{S.search[stage]=e.target.value;clearTimeout(sr._t);sr._t=setTimeout(()=>{S.cur[stage]=null;renderScreen(stage);const n=$("#srch-"+stage);n.focus();n.setSelectionRange(n.value.length,n.value.length)},350)};
+  if(cur)bindCard(stage,cur,qlist);
+  if(isTA)bindAI();
+}
+function pillHTML(s){return`<span class="pill ${s.s}">${SLABEL[s.s]||s.s}</span>`}
+function renderTeamHTML(){
+  const sl=S.project.slots,mode=+P().reviewers===1?1:2;const role=myRole();
+  const slot=(key,label)=>{const id=sl[key];const mine=id&&id===S.me;
+    return`<div class="slot ${mine?"mine":""}"><div class="who"><small>${label}</small><span>${id?esc(nameOf(id)):'<span class="muted">Vago</span>'}</span></div>${
+      !id&&!role&&S.me&&S.canWrite?`<button class="btn small" data-join="${key}">Entrar como ${label.toLowerCase()}</button>`:mine?`<button class="link" data-leave="${key}">Sair</button>`:(id&&S.project&&isOwnerCache?`<button class="link" data-leave="${key}">Liberar vaga</button>`:"")}</div>`};
+  return`<div class="team">${slot("r1","Revisor 1")}${mode===2?slot("r2","Revisor 2"):""}</div>${!S.me&&S.mode==="db"?`<p class="note">Entre na sua conta para registrar decisões.</p>`:""}`;
+}
+let isOwnerCache=false;
+function renderTeam(){if(S.view==="ta"||S.view==="ft")renderScreen(S.view)}
+function bindTeam(){
+  $$("[data-join]").forEach(b=>b.onclick=()=>{S.project.slots={...S.project.slots,[b.dataset.join]:S.me};queue("project/main",{slots:S.project.slots},"update");subscribeVotes();loadNames();renderAll()});
+  $$("[data-leave]").forEach(b=>b.onclick=()=>{S.project.slots={...S.project.slots,[b.dataset.leave]:null};queue("project/main",{slots:S.project.slots},"update");subscribeVotes();renderAll()});
+}
+const DRAFT={ta:{},ft:{}};
+function answersFor(stage,k){const myV=S.me?S.votes[stage][S.me]?.[k]:null;return DRAFT[stage][k]||(myV&&myV.cr?{...myV.cr}:{})}
+function critRowsHTML(stage,r){
+  const ans=answersFor(stage,r.k);const auto=F.crit[r.k]||{};const role=myRole();
+  const row=(c,kind)=>{const a=auto[c.c];const v=ans[c.c];
+    const autoTxt=a?(a.v==="u"?'<span class="pill pend">indeterminado</span>':kind==="ic"?(a.v==="y"?'<span class="pill inc">atende</span>':'<span class="pill exc">não atende</span>'):(a.v==="y"?'<span class="pill exc">se aplica</span>':'<span class="pill inc">não se aplica</span>')):'<span class="pill pend">manual</span>';
+    const btn=(val,label)=>`<button class="cbtn ${val==="y"?(kind==="ic"?"good":"bad"):val==="n"?(kind==="ic"?"bad":"good"):"unk"} ${a&&a.v===val&&!v?"hint":""}" data-cr="${esc(c.c)}" data-v="${val}" aria-pressed="${v===val}" ${role?"":"disabled"}>${label}</button>`;
+    return`<div class="crow ${v?"done":""}"><div class="ccode mono">${esc(c.c)}</div><div class="cbody"><div class="ctext">${esc(c.t)}</div><div class="cauto">${autoTxt}${a&&a.ev?`<span class="ev">${highlight(a.ev)}</span>`:""}</div></div>
+      <div class="cbtns" role="group" aria-label="${esc(c.c)}">${btn("y",kind==="ic"?"Atende":"Aplica")}${btn("n",kind==="ic"?"Não atende":"Não aplica")}${btn("u","?")}</div></div>`};
+  const ic=(P().ic||[]).filter(c=>c.c),ec=(P().ec||[]).filter(c=>c.c);
+  if(!ic.length&&!ec.length)return"";
+  return`<div class="crit-check"><div class="row" style="justify-content:space-between"><h3>Critérios de elegibilidade</h3>${role?`<button class="link" data-acceptall="1">Aceitar a pré-avaliação <kbd>A</kbd></button>`:""}</div>
+    ${ic.length?`<div class="cgroup"><span class="eyebrow">Inclusão: o estudo atende?</span>${ic.map(c=>row(c,"ic")).join("")}</div>`:""}
+    ${ec.length?`<div class="cgroup"><span class="eyebrow">Exclusão: o critério se aplica?</span>${ec.map(c=>row(c,"ec")).join("")}</div>`:""}</div>`;
+}
+function cardHTML(r,stage){
+  const isTA=stage==="ta";const st=(isTA?F.ta:F.ft)[r.k];const role=myRole();
+  const myV=S.me?S.votes[stage][S.me]?.[r.k]:null;
+  const mode=+P().reviewers===1?1:2;
+  const ids=[S.project.slots.r1,mode===2?S.project.slots.r2:null].filter(Boolean);
+  const bothVoted=ids.length===2&&ids.every(id=>S.votes[stage][id]?.[r.k]);
+  const showOthers=!role||P().blind===false||bothVoted||st.s==="conf"||(S.cons[stage][r.k]);
+  const ai=isTA?S.ai[r.k]:null;const showAI=ai&&(!role||myV);
+  const reasons=[...(P().ec||[]).filter(c=>c.c).map(c=>({c:c.c,t:c.t})),...(P().ic||[]).filter(c=>c.c).map(c=>({c:c.c,t:"Não atende: "+c.t}))];
+  const ans=answersFor(stage,r.k);const sug=suggestDecision(ans,P());
+  const reason=DRAFT[stage][r.k]&&sug.r?sug.r:(myV?.r||sug.r||"");
+  const opts=isTA?["inc","may","exc"]:["inc","exc","nr"];
+  const keys={inc:"I",may:"T",exc:"E",nr:"N"};
+  const voteCards=ids.map((id,i)=>{const v=S.votes[stage][id]?.[r.k];const hidden=id!==S.me&&!showOthers;
+    return`<div class="vote"><span class="lbl">Revisor ${i+1}${id===S.me?" (você)":""}</span>${hidden?'<span class="muted">Oculto até você decidir</span>':v?`<span>${pillHTML({s:v.d})}${v.r?` <span class="mono">${esc(v.r)}</span>`:""}${v.bulk?' <span class="note">em lote</span>':""}</span>`:'<span class="muted">Sem decisão</span>'}</div>`}).join("")
+    +(showAI?`<div class="vote"><span class="lbl">Sugestão da IA</span><span>${pillHTML({s:ai.d})}${ai.c?` <span class="mono">${esc(ai.c)}</span>`:""}</span>${ai.r?`<span class="note">${esc(ai.r)}</span>`:""}</div>`:"")
+    +(S.cons[stage][r.k]?`<div class="vote"><span class="lbl">Consenso</span><span>${pillHTML({s:S.cons[stage][r.k].d})}${S.cons[stage][r.k].r?` <span class="mono">${esc(S.cons[stage][r.k].r)}</span>`:""}</span></div>`:"");
+  const canConsensus=S.canWrite&&S.me&&mode===2&&(st.s==="conf"||S.cons[stage][r.k]);
+  const sugD=sug.d&&!(isTA===false&&sug.d==="may")?sug.d:(sug.d==="may"&&!isTA?null:sug.d);
+  return`<article class="card">
+    <div class="meta"><span class="src">${esc(KNOWN_SOURCES[r.src]||r.src)}</span>${r.y?`<span class="mono">${r.y}</span>`:""}${r.v?`<span>${esc(r.v)}</span>`:""}${r.ty?`<span>${esc(r.ty)}</span>`:""}${r.lg?`<span>${esc(r.lg)}</span>`:""}${r.pg?`<span>${r.pg} p.</span>`:""}${pillHTML(st)}</div>
+    <h2 class="t">${highlight(r.t)}</h2>
+    ${r.a?`<p class="au">${esc(r.a.length>260?r.a.slice(0,260)+"…":r.a)}</p>`:""}
+    ${r.ab?`<p class="ab">${highlight(r.ab)}</p>`:`<p class="ab none">Sem resumo nesta exportação. Use o DOI para ler o resumo na fonte.</p>`}
+    ${r.kw?`<p class="note"><b>Palavras-chave:</b> ${highlight(r.kw)}</p>`:""}
+    <div class="row">${r.doi?`<a class="link" href="https://doi.org/${esc(normDoi(r.doi))}" target="_blank" rel="noopener">doi.org/${esc(normDoi(r.doi))}</a>`:""}${r.u&&!r.doi?`<a class="link" href="${esc(r.u)}" target="_blank" rel="noopener">Abrir na base</a>`:""}</div>
+    ${critRowsHTML(stage,r)}
+    ${ids.length||showAI?`<div class="votes">${voteCards}</div>`:""}
+    ${role?`<div class="decide">
+      ${sugD?`<button class="btn" data-dsug="${sugD}">Registrar: ${DLABEL[sugD]}${sug.r?" ("+esc(sug.r)+")":""} <kbd class="kb">↵</kbd></button>`:`<span class="note">${esc(sug.why)}</span>`}
+      <span class="sep"></span>
+      ${opts.map(d=>`<button class="dbtn ${d}" data-d="${d}" aria-pressed="${myV?.d===d}">${DLABEL[d]} <kbd>${keys[d]}</kbd></button>`).join("")}
+      <select id="reason-${stage}" aria-label="Motivo da exclusão"><option value="">${isTA?"Motivo (opcional)":"Motivo da exclusão"}</option>${reasons.map(c=>`<option value="${esc(c.c)}" ${reason===c.c?"selected":""}>${esc(c.c)} · ${esc(c.t.length>50?c.t.slice(0,50)+"…":c.t)}</option>`).join("")}</select>
+      <span class="note" id="dmsg-${stage}"></span></div>`
+      :`<div class="callout warn">${S.me?(S.canWrite?"Entre como revisor acima para registrar decisões.":"Você tem acesso só de leitura."):"Entre na sua conta para registrar decisões."}</div>`}
+    ${canConsensus?`<div class="decide"><span class="note">Decisão de consenso:</span>${opts.filter(d=>d!=="may").map(d=>`<button class="btn ghost small" data-cons="${d}">${DLABEL[d]}</button>`).join("")}${S.cons[stage][r.k]?`<button class="link" data-cons="">desfazer consenso</button>`:""}</div>`:""}
+    <div class="nav"><button class="btn ghost small" data-nav="-1">← Anterior</button><span class="kbdhint">A aceitar pré-avaliação · ↵ registrar sugerida · ${opts.map(d=>keys[d]+" "+DLABEL[d].toLowerCase()).join(" · ")} · ← →</span><button class="btn ghost small" data-nav="1">Próximo →</button></div>
+  </article>`;
+}
+function acceptAuto(stage,k){
+  const auto=F.crit[k]||{};const a={...answersFor(stage,k)};
+  for(const[c,e]of Object.entries(auto))if(!a[c]&&e.v!=="u")a[c]=e.v;
+  DRAFT[stage][k]=a;renderScreen(stage);
+}
+function bindCard(stage,k,qlist){
+  const root=$("#v-"+stage);
+  root.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>vote(stage,k,b.dataset.d));
+  root.querySelectorAll("[data-dsug]").forEach(b=>b.onclick=()=>vote(stage,k,b.dataset.dsug,false,true));
+  root.querySelectorAll("[data-nav]").forEach(b=>b.onclick=()=>nav(stage,+b.dataset.nav));
+  root.querySelectorAll("[data-cons]").forEach(b=>b.onclick=()=>setConsensus(stage,k,b.dataset.cons));
+  root.querySelectorAll("[data-cr]").forEach(b=>b.onclick=()=>{const a={...answersFor(stage,k)};a[b.dataset.cr]=a[b.dataset.cr]===b.dataset.v?undefined:b.dataset.v;if(!a[b.dataset.cr])delete a[b.dataset.cr];DRAFT[stage][k]=a;renderScreen(stage)});
+  root.querySelectorAll("[data-acceptall]").forEach(b=>b.onclick=()=>acceptAuto(stage,k));
+  const rs=$("#reason-"+stage);if(rs)rs.onchange=()=>{const v=S.votes[stage][S.me]?.[k];if(v)vote(stage,k,v.d,true)};
+}
+function nav(stage,dir){const ql=queueFor(stage);const i=ql.findIndex(r=>r.k===S.cur[stage]);const n=ql[Math.max(0,Math.min(ql.length-1,i+dir))];if(n){S.cur[stage]=n.k;renderScreen(stage)}}
+function chunkOf(k){return k.slice(0,k.lastIndexOf("~"))}
+function vote(stage,k,d,keepPos,fromSug){
+  if(!S.me||!myRole())return;
+  const ans=answersFor(stage,k);const sug=suggestDecision(ans,P());
+  let r=$("#reason-"+stage)?.value||"";
+  if(fromSug&&sug.r)r=sug.r;
+  if(stage==="ft"&&d==="exc"&&!r){$("#dmsg-"+stage).textContent="Escolha o motivo da exclusão.";$("#reason-"+stage).focus();return}
+  const cid=chunkOf(k);
+  const docs=(S.voteDocs[stage][S.me]??={});const m=(docs[cid]={...(docs[cid]||{})});
+  const v=d==="exc"||d==="nr"?{d,r}:{d};if(Object.keys(ans).length)v.cr=ans;
+  m[k]=v;(S.votes[stage][S.me]??={})[k]=v;delete DRAFT[stage][k];
+  queue("votes/"+S.me+"/"+stage+"/"+cid,{m});
+  derive();
+  const ql=queueFor(stage);
+  if(!keepPos&&S.filter[stage]==="mine"){const old=ql.findIndex(x=>x.k===k);S.cur[stage]=old>=0?k:(ql[0]?.k||null)}
+  else if(!keepPos){const i=ql.findIndex(x=>x.k===k);if(i>=0&&ql[i+1])S.cur[stage]=ql[i+1].k}
+  renderBadges();renderScreen(stage);
+}
+
+function setConsensus(stage,k,d){
+  const cid=chunkOf(k);const id=stage+"-"+cid;const m={...(S.consDocs[id]||{})};
+  const r=$("#reason-"+stage)?.value||"";
+  if(stage==="ft"&&d==="exc"&&!r){toast("Escolha o motivo da exclusão no seletor antes de registrar o consenso.");return}
+  if(d)m[k]=d==="exc"||d==="nr"?{d,r}:{d};else delete m[k];
+  S.consDocs[id]=m;if(d)S.cons[stage][k]=m[k];else delete S.cons[stage][k];
+  queue("consensus/"+id,{m});derive();renderBadges();renderScreen(stage);
+}
+document.addEventListener("keydown",e=>{
+  if(!["ta","ft"].includes(S.view))return;
+  if(e.target.closest("input,textarea,select")||e.metaKey||e.ctrlKey||e.altKey)return;
+  const stage=S.view,k=S.cur[stage];if(!k)return;
+  const map=stage==="ta"?{i:"inc",t:"may",e:"exc"}:{i:"inc",e:"exc",n:"nr"};
+  const d=map[e.key.toLowerCase()];
+  if(myRole()&&e.key.toLowerCase()==="a"){e.preventDefault();acceptAuto(stage,k);return}
+  if(myRole()&&e.key==="Enter"&&!e.target.closest("button")){const b=$(`#v-${stage} [data-dsug]`);if(b){e.preventDefault();b.click()}return}
+  if(d&&myRole()){e.preventDefault();vote(stage,k,d)}
+  else if(e.key==="ArrowRight"){e.preventDefault();nav(stage,1)}
+  else if(e.key==="ArrowLeft"){e.preventDefault();nav(stage,-1)}
+});
+
+/* ---------- IA ---------- */
+let sampleFn=null,aiRun=null;
+function aiPanelHTML(){
+  const pend=F.screen.filter(r=>!S.ai[r.k]).length;const done=F.screen.length-pend;
+  return`<div class="panel"><header><h2>Sugestão da IA (opcional)</h2><p>A IA classifica os registros contra os critérios do protocolo. A sugestão só aparece para um revisor depois que ele decide, para não influenciar a decisão. Ela nunca inclui nem exclui sozinha.</p></header>
+    <div class="ai-box">
+      <div class="row"><span class="stat"><b>${fmtN(done)}</b> com sugestão</span><span class="stat"><b>${fmtN(pend)}</b> sem sugestão</span></div>
+      <div class="row">
+        <button class="btn ghost" id="ai-run" ${!pend||!S.canWrite||S.mode!=="db"||aiRun?"disabled":""}>Pedir sugestões para ${fmtN(Math.min(pend,200))} registros</button>
+        ${aiRun?`<button class="btn danger small" id="ai-stop">Parar</button>`:""}
+        <span class="note" id="ai-msg">${aiRun?esc(aiRun.msg):"Cada pedido envia até 20 registros. Usa a sua cota de uso do Claude."}</span>
+      </div>
+    </div></div>`;
+}
+function bindAI(){const b=$("#ai-run");if(b)b.onclick=runAI;const s=$("#ai-stop");if(s)s.onclick=()=>{if(aiRun)aiRun.stop=true}}
+async function runAI(){
+  if(!sampleFn){try{sampleFn=await window.claude?.use?.("sample")}catch(e){}}
+  if(!sampleFn){toast("A sugestão por IA não está disponível nesta visualização.");return}
+  const todo=F.screen.filter(r=>!S.ai[r.k]).slice(0,200);
+  aiRun={msg:"Preparando…",stop:false,done:0};renderScreen("ta");
+  const p=P();
+  const crit=`Questão geral: ${p.gq?.en||p.gq?.pt||p.title}\n${(p.sqs||[]).filter(x=>x.en||x.pt).map(x=>x.id+": "+(x.en||x.pt)).join("\n")}\nCritérios de inclusão:\n${(p.ic||[]).map(c=>c.c+": "+c.t).join("\n")}\nCritérios de exclusão:\n${(p.ec||[]).map(c=>c.c+": "+c.t).join("\n")}`;
+  let n=0;
+  for(let i=0;i<todo.length;i+=20){
+    if(aiRun.stop)break;
+    const batch=todo.slice(i,i+20);
+    const items=batch.map((r,j)=>({i:j+1,titulo:r.t,resumo:(r.ab||"").slice(0,1500)||"(sem resumo)",veiculo:r.v||"",ano:r.y||""}));
+    const prompt=`Você apoia a triagem de títulos e resumos de uma revisão sistemática. Sua classificação é só uma sugestão: dois revisores humanos decidem.\n\n${crit}\n\nPara cada registro abaixo, responda "include" se houver indícios de que atende a todos os critérios de inclusão, "maybe" se a informação for insuficiente para decidir, ou "exclude" se algum critério de exclusão claramente se aplica. Ao excluir, informe o código do critério.\n\nRegistros:\n${JSON.stringify(items)}\n\nResponda somente com um array JSON no formato [{"i":1,"d":"include|maybe|exclude","c":"EC3 ou vazio","r":"motivo em até 12 palavras"}].`;
+    aiRun.msg=`Classificando ${fmtN(i+1)}–${fmtN(i+batch.length)} de ${fmtN(todo.length)}…`;const msgEl=$("#ai-msg");if(msgEl)msgEl.textContent=aiRun.msg;
+    let res;
+    try{res=await sampleFn.json(prompt,{modelTier:"quick"})}catch(e){
+      if(e&&e.code==="not_granted"){aiRun.msg="Permissão para usar o Claude não concedida.";break}
+      if(e&&e.code==="rate_limited"){aiRun.msg="Limite de uso atingido. Tente de novo mais tarde.";break}
+      aiRun.msg="Um lote falhou e foi pulado.";continue;
+    }
+    if(!Array.isArray(res))continue;
+    const byChunk={};
+    for(const o of res){const r=batch[(+o.i)-1];if(!r)continue;const d=o.d==="include"?"inc":o.d==="exclude"?"exc":"may";(byChunk[chunkOf(r.k)]??={})[r.k]={d,c:String(o.c||"").slice(0,12),r:String(o.r||"").slice(0,120)};n++}
+    for(const[cid,m]of Object.entries(byChunk)){const merged={...(S.aiDocs[cid]||{}),...m};S.aiDocs[cid]=merged;Object.assign(S.ai,m);queue("ai/"+cid,{m:merged})}
+    derive();
+  }
+  if(n){
+    const entry={id:uid(),date:today(),stage:"Triagem de títulos e resumos",tool:"Claude (modelo rápido), via Bancada PRISMA",what:`Sugeriu incluir, talvez ou excluir para ${n} registros, com base no título, no resumo e nos critérios do protocolo.`,check:"Sugestão exibida ao revisor só depois da decisão dele; todas as decisões foram tomadas por revisores humanos.",auto:true};
+    S.project.aiLog=[...(S.project.aiLog||[]),entry];queue("project/main",{aiLog:S.project.aiLog},"update");
+  }
+  const final=aiRun.stop?"Interrompido. ":"";aiRun=null;toast(final+fmtN(n)+" sugestões registradas.");renderAll();
+}
+
+/* ---------- extração ---------- */
+function extractPool(){return F.ftPool.filter(r=>F.ft[r.k].s==="inc")}
+function exOf(k){return S.ex[k]||{}}
+function exStatus(k){const e=exOf(k);return e.done?"done":Object.keys(e).some(x=>x.startsWith("SQ")||x.startsWith("sq"))?"wip":"todo"}
+function sqKey(s,i){return s.id||("SQ"+(i+1))}
+function renderExtract(){
+  const el=$("#v-ex");const pool=extractPool();const sqs=(P().sqs||[]);
+  const done=pool.filter(r=>exStatus(r.k)==="done").length,wip=pool.filter(r=>exStatus(r.k)==="wip").length;
+  const head=`<div class="panel"><header><h2>Extração de dados</h2><p>Uma seção por questão secundária. As categorias sugeridas vêm do livro de códigos de cada questão, aplicado ao título, ao resumo e às palavras-chave. Aceite, recuse ou acrescente categorias e registre o trecho que sustenta cada uma.</p></header>
+    <div class="stats"><span class="stat"><b>${fmtN(pool.length)}</b> estudos incluídos</span><span class="stat ok"><b>${fmtN(done)}</b> concluídos</span><span class="stat warn"><b>${fmtN(wip)}</b> em andamento</span><span class="stat"><b>${fmtN(pool.length-done-wip)}</b> não iniciados</span></div>
+    <div class="seg" role="group" aria-label="Visão"><button data-exv="form" aria-pressed="${S.exView!=="matrix"}">Formulário</button><button data-exv="matrix" aria-pressed="${S.exView==="matrix"}">Matriz e taxonomia</button></div></div>`;
+  if(!pool.length){el.innerHTML=head+`<div class="empty"><b>Nenhum estudo incluído ainda</b>Os estudos aparecem aqui quando a decisão final da etapa de elegibilidade for incluir.</div>`;bindExView();return}
+  if(!sqs.length){el.innerHTML=head+`<div class="empty"><b>Sem questões secundárias</b>Cadastre as questões secundárias e seus livros de códigos no Protocolo.</div>`;bindExView();return}
+  if(S.exView==="matrix"){el.innerHTML=head+matrixHTML(pool,sqs);bindExView();bindMatrix();return}
+  let cur=S.cur.ex;if(!cur||!pool.some(r=>r.k===cur))cur=S.cur.ex=pool[0].k;
+  const r=F.byK[cur];const e=exOf(cur);const canEdit=S.canWrite&&S.me&&S.mode==="db";
+  const idOf=k=>"S"+String(pool.findIndex(x=>x.k===k)+1).padStart(2,"0");
+  const list=`<div class="list">${pool.map(x=>`<button class="li" data-exgo="${x.k}" aria-current="${x.k===cur}"><span><span class="lt"><span class="mono">${idOf(x.k)}</span> ${esc(x.t)}</span><span class="lm">${esc(x.y||"")} · ${esc(KNOWN_SOURCES[x.src]||x.src)}</span></span><span class="pill ${({done:"inc",wip:"may",todo:"pend"})[exStatus(x.k)]}">${({done:"Concluída",wip:"Em andamento",todo:"Não iniciada"})[exStatus(x.k)]}</span></button>`).join("")}</div>`;
+  const sections=sqs.map((s,i)=>{
+    const key=sqKey(s,i);const d=e[key]||{};const acc=d.a||[],rej=d.x||[];
+    const sugg=suggestCodes(r,s.codes).filter(x=>!acc.includes(x.cat)&&!rej.includes(x.cat));
+    return`<section class="exsec"><header><span class="mono">${esc(key)}</span><b>${esc(s.label||"")}</b></header>
+      <p class="note">${esc(s.pt||s.en||"")}</p>
+      ${acc.length?`<div class="chips">${acc.map(c=>`<span class="chip ok">${esc(c)}${canEdit?`<button aria-label="Remover ${esc(c)}" data-exrm="${esc(key)}|${esc(c)}">×</button>`:""}</span>`).join("")}</div>`:""}
+      ${sugg.length?`<div class="sugg">${sugg.map(x=>`<div class="sg"><div><b>${esc(x.cat)}</b><span class="ev">“${esc(x.term)}” no ${FIELD_NAMES[x.field]}: ${highlight(x.snip)}</span></div>${canEdit?`<span class="row" style="gap:6px;flex-wrap:nowrap"><button class="cbtn good" data-exacc="${esc(key)}|${esc(x.cat)}|${esc(x.snip)}">Aceitar</button><button class="cbtn bad" data-exrej="${esc(key)}|${esc(x.cat)}">Recusar</button></span>`:""}</div>`).join("")}</div>`:`<p class="note">${parseCodes(s.codes).length?"Nenhuma sugestão pendente para esta questão.":"Sem livro de códigos para esta questão. Cadastre categorias no Protocolo para receber sugestões."}</p>`}
+      ${rej.length?`<p class="note">Recusadas: ${rej.map(esc).join(", ")} ${canEdit?`<button class="link" data-exunrej="${esc(key)}">desfazer</button>`:""}</p>`:""}
+      <div class="grid2">
+        <label class="f">Outra categoria<span class="row" style="flex-wrap:nowrap;gap:6px"><input type="text" id="exo-${esc(key)}" placeholder="Digite e tecle Enter" ${canEdit?"":"disabled"} list="dl-${esc(key)}"><datalist id="dl-${esc(key)}">${parseCodes(s.codes).map(c=>`<option value="${esc(c.cat)}">`).join("")}</datalist></span></label>
+        <label class="f">Evidência / observações<textarea id="exn-${esc(key)}" data-exnote="${esc(key)}" rows="2" ${canEdit?"":"disabled"} placeholder="Trecho do resumo que sustenta a codificação">${esc(d.n||"")}</textarea></label>
+      </div></section>`}).join("");
+  el.innerHTML=head+`<div class="panel"><div class="ftlay"><div>${list}</div><div><article class="card">
+    <div class="meta"><span class="mono">${idOf(cur)}</span><span class="src">${esc(KNOWN_SOURCES[r.src]||r.src)}</span>${r.y?`<span class="mono">${r.y}</span>`:""}${r.v?`<span>${esc(r.v)}</span>`:""}</div>
+    <h2 class="t">${esc(r.t)}</h2>${r.a?`<p class="au">${esc(r.a.length>200?r.a.slice(0,200)+"…":r.a)}</p>`:""}
+    <details ${r.ab?"open":""}><summary class="note">Resumo e palavras-chave</summary>${r.ab?`<p class="ab">${esc(r.ab)}</p>`:'<p class="ab none">Sem resumo.</p>'}${r.kw?`<p class="note"><b>Palavras-chave:</b> ${esc(r.kw)}</p>`:""}</details>
+    ${r.doi?`<a class="link" href="https://doi.org/${esc(normDoi(r.doi))}" target="_blank" rel="noopener">doi.org/${esc(normDoi(r.doi))}</a>`:""}
+    ${sections}
+    <div class="decide"><label class="check"><input type="checkbox" id="exdone" ${e.done?"checked":""} ${canEdit?"":"disabled"}><span>Extração deste estudo concluída</span></label>${e.by?`<span class="note">Última edição: ${esc(nameOf(e.by))}</span>`:""}</div>
+    <div class="nav"><button class="btn ghost small" data-exnav="-1">← Anterior</button><button class="btn ghost small" data-exnav="1">Próximo →</button></div>
+  </article></div></div></div>`;
+  bindExView();bindExForm(cur,pool);
+}
+function saveEx(k,mut){
+  const cid=chunkOf(k);const m={...(S.exDocs[cid]||{})};const e=JSON.parse(JSON.stringify(m[k]||{}));
+  mut(e);e.by=S.me;e.at=new Date().toISOString();m[k]=e;S.exDocs[cid]=m;S.ex[k]=e;queue("extract/"+cid,{m});
+}
+function bindExView(){$$("#v-ex [data-exv]").forEach(b=>b.onclick=()=>{S.exView=b.dataset.exv;renderExtract()})}
+function bindExForm(k,pool){
+  const sq=key=>e=>(e[key]??={a:[],x:[]});
+  $$("#v-ex [data-exgo]").forEach(b=>b.onclick=()=>{S.cur.ex=b.dataset.exgo;renderExtract()});
+  $$("#v-ex [data-exnav]").forEach(b=>b.onclick=()=>{const i=pool.findIndex(r=>r.k===k)+(+b.dataset.exnav);if(pool[i]){S.cur.ex=pool[i].k;renderExtract()}});
+  $$("#v-ex [data-exacc]").forEach(b=>b.onclick=()=>{const[key,cat,snip]=b.dataset.exacc.split("|");saveEx(k,e=>{const d=sq(key)(e);d.a=[...new Set([...(d.a||[]),cat])];if(!d.n)d.n=snip});renderExtract()});
+  $$("#v-ex [data-exrej]").forEach(b=>b.onclick=()=>{const[key,cat]=b.dataset.exrej.split("|");saveEx(k,e=>{const d=sq(key)(e);d.x=[...new Set([...(d.x||[]),cat])]});renderExtract()});
+  $$("#v-ex [data-exunrej]").forEach(b=>b.onclick=()=>{const key=b.dataset.exunrej;saveEx(k,e=>{sq(key)(e).x=[]});renderExtract()});
+  $$("#v-ex [data-exrm]").forEach(b=>b.onclick=()=>{const[key,cat]=b.dataset.exrm.split("|");saveEx(k,e=>{const d=sq(key)(e);d.a=(d.a||[]).filter(x=>x!==cat)});renderExtract()});
+  $$("#v-ex input[id^='exo-']").forEach(inp=>inp.onkeydown=ev=>{if(ev.key!=="Enter")return;ev.preventDefault();const v=inp.value.trim();if(!v)return;const key=inp.id.slice(4);saveEx(k,e=>{const d=sq(key)(e);d.a=[...new Set([...(d.a||[]),v])]});renderExtract();$("#exo-"+key)?.focus()});
+  $$("#v-ex [data-exnote]").forEach(t=>t.oninput=()=>{clearTimeout(t._t);t._t=setTimeout(()=>saveEx(k,e=>{sq(t.dataset.exnote)(e).n=t.value}),600)});
+  const dn=$("#exdone");if(dn)dn.onchange=()=>{saveEx(k,e=>{e.done=dn.checked});renderExtract()};
+}
+function matrixData(pool,sqs){
+  return pool.map((r,i)=>{const e=exOf(r.k);const row={id:"S"+String(i+1).padStart(2,"0"),r,done:!!e.done};sqs.forEach((s,j)=>{row[sqKey(s,j)]=(e[sqKey(s,j)]?.a)||[]});return row});
+}
+function matrixHTML(pool,sqs){
+  const rows=matrixData(pool,sqs);
+  const freq=sqs.map((s,j)=>{const key=sqKey(s,j);const f={};rows.forEach(r=>r[key].forEach(c=>f[c]=(f[c]||0)+1));return{key,label:s.label,f:Object.entries(f).sort((a,b)=>b[1]-a[1])}});
+  const keys=sqs.map(sqKey);
+  const ca=S.cross?.a||keys[0],cb=S.cross?.b||keys[Math.min(1,keys.length-1)];
+  const catsA=[...new Set(rows.flatMap(r=>r[ca]||[]))],catsB=[...new Set(rows.flatMap(r=>r[cb]||[]))];
+  const cross=catsA.map(a=>catsB.map(b=>rows.filter(r=>(r[ca]||[]).includes(a)&&(r[cb]||[]).includes(b)).length));
+  const max=Math.max(1,...cross.flat());
+  return`<div class="panel"><header><h2>Matriz de extração</h2><p>Uma linha por estudo, uma coluna por questão secundária. É a base da taxonomia.</p></header>
+    <div class="tbl"><table><thead><tr><th>ID</th><th>Estudo</th>${sqs.map((s,j)=>`<th>${esc(sqKey(s,j))}${s.label?" · "+esc(s.label):""}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr><td class="mono">${r.id}${r.done?"":' <span class="pill may">aberta</span>'}</td><td style="min-width:220px">${esc(r.r.t)} <span class="note">(${esc(r.r.y||"")})</span></td>${keys.map(k=>`<td>${r[k].map(esc).join("; ")||'<span class="muted">—</span>'}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    <div class="row"><button class="btn" id="ex-wide">Matriz (CSV)</button><button class="btn ghost" id="ex-long">Codificação detalhada (CSV)</button></div></div>
+    <div class="panel"><header><h2>Frequência das categorias</h2></header><div class="freqs">${freq.map(q=>`<div class="freq"><h3><span class="mono">${esc(q.key)}</span> ${esc(q.label||"")}</h3>${q.f.length?q.f.map(([c,n])=>`<div class="fr"><span>${esc(c)}</span><span class="fbar"><span style="width:${n/pool.length*100}%"></span></span><b class="mono">${n}</b></div>`).join(""):'<p class="note">Nenhuma categoria aceita ainda.</p>'}</div>`).join("")}</div></div>
+    <div class="panel"><header><h2>Cruzamento entre questões</h2><p>Quantos estudos combinam cada par de categorias, como na cadeia competência → evidência → método.</p></header>
+      <div class="row"><select id="cx-a" aria-label="Linhas">${keys.map(k=>`<option ${k===ca?"selected":""}>${esc(k)}</option>`).join("")}</select><span class="note">×</span><select id="cx-b" aria-label="Colunas">${keys.map(k=>`<option ${k===cb?"selected":""}>${esc(k)}</option>`).join("")}</select></div>
+      ${catsA.length&&catsB.length?`<div class="tbl"><table class="cross"><thead><tr><th>${esc(ca)} \\ ${esc(cb)}</th>${catsB.map(b=>`<th>${esc(b)}</th>`).join("")}</tr></thead><tbody>${catsA.map((a,i)=>`<tr><td>${esc(a)}</td>${cross[i].map(n=>`<td class="num" style="background:color-mix(in srgb,var(--accent) ${Math.round(n/max*55)}%,transparent)">${n||""}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`:'<p class="note">Aceite categorias nas duas questões para ver o cruzamento.</p>'}
+    </div>`;
+}
+function bindMatrix(){
+  const pool=extractPool(),sqs=P().sqs||[];
+  const a=$("#cx-a"),b=$("#cx-b");if(a)a.onchange=b.onchange=()=>{S.cross={a:a.value,b:b.value};renderExtract()};
+  $("#ex-wide").onclick=()=>{const rows=matrixData(pool,sqs);const keys=sqs.map(sqKey);
+    const lines=[csvRow(["id","title","authors","year","venue","doi",...keys,"extracao_concluida"])];
+    rows.forEach(r=>lines.push(csvRow([r.id,r.r.t,r.r.a,r.r.y,r.r.v,r.r.doi,...keys.map(k=>r[k].join("; ")),r.done?"sim":"não"])));
+    download("matriz_extracao.csv","﻿"+lines.join("\n"),"text/csv")};
+  $("#ex-long").onclick=()=>{const lines=[csvRow(["id","title","questao","rotulo","categoria","evidencia"])];
+    pool.forEach((r,i)=>{const e=exOf(r.k);sqs.forEach((s,j)=>{const key=sqKey(s,j);const d=e[key]||{};(d.a||[]).forEach(c=>lines.push(csvRow(["S"+String(i+1).padStart(2,"0"),r.t,key,s.label,c,d.n||""])))})});
+    download("codificacao_extracao.csv","﻿"+lines.join("\n"),"text/csv")};
+}
+
+/* ---------- PRISMA ---------- */
+function prismaCounts(){
+  const p=P();const bySrc={};F.recs.forEach(r=>bySrc[r.src]=(bySrc[r.src]||0)+1);
+  const autoN=Object.keys(F.auto).length,dupN=Object.keys(F.dupOf).length;
+  const screened=F.screen.length;
+  const taExc=F.screen.filter(r=>F.ta[r.k].s==="exc").length,taPend=F.screen.filter(r=>["pend","conf"].includes(F.ta[r.k].s)).length;
+  const sought=F.ftPool.length;
+  const nr=F.ftPool.filter(r=>F.ft[r.k].s==="nr").length;
+  const assessed=sought-nr;
+  const ftExc=F.ftPool.filter(r=>F.ft[r.k].s==="exc");
+  const reasons={};ftExc.forEach(r=>{const c=F.ft[r.k].r||"Sem motivo";reasons[c]=(reasons[c]||0)+1});
+  const ftPend=F.ftPool.filter(r=>["pend","conf"].includes(F.ft[r.k].s)).length;
+  const inc=F.ftPool.filter(r=>F.ft[r.k].s==="inc").length;
+  return{bySrc,total:F.recs.length,dupN,autoN,screened,taExc,taPend,sought,nr,assessed,ftExcN:ftExc.length,reasons,ftPend,inc};
+}
+function flowSVG(c,print){
+  const col=print?{bg:"#FFFFFF",ink:"#13252A",line:"#9AAAAC",side:"#F3F6F6",ph:"#DCEDEE",pht:"#1C6670",mut:"#55686D"}:null;
+  const W=820,LX=120,LW=330,RX=500,RW=300,lh=17,pad=12;
+  const P2=P();
+  const srcLines=Object.entries(c.bySrc).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`${KNOWN_SOURCES[s]||s} (n = ${fmtN(n)})`);
+  const reasonLines=Object.entries(c.reasons).sort((a,b)=>b[1]-a[1]).map(([k,n])=>{const e=(P2.ec||[]).find(x=>x.c===k)||((P2.ic||[]).find(x=>x.c===k)?{t:"não atende "+k}:null);return`${k}${e?": "+(e.t.length>34?e.t.slice(0,34)+"…":e.t):""} (n = ${fmtN(n)})`});
+  const boxes=[
+    {ph:0,L:["Registros identificados em bases de dados (n = "+fmtN(c.total)+")",...srcLines.map(s=>"   "+s)],R:["Registros removidos antes da triagem:","   Duplicados (n = "+fmtN(c.dupN)+")","   Marcados como inelegíveis por","   ferramentas automáticas (n = "+fmtN(c.autoN)+")","   Removidos por outros motivos (n = 0)"]},
+    {ph:1,L:["Registros triados (n = "+fmtN(c.screened)+")"].concat(c.taPend?["   Ainda em triagem (n = "+fmtN(c.taPend)+")"]:[]),R:["Registros excluídos (n = "+fmtN(c.taExc)+")"]},
+    {ph:1,L:["Relatórios buscados para recuperação (n = "+fmtN(c.sought)+")"],R:["Relatórios não recuperados (n = "+fmtN(c.nr)+")"]},
+    {ph:1,L:["Relatórios avaliados para elegibilidade (n = "+fmtN(c.assessed)+")"].concat(c.ftPend?["   Ainda em avaliação (n = "+fmtN(c.ftPend)+")"]:[]),R:["Relatórios excluídos (n = "+fmtN(c.ftExcN)+"):",...(reasonLines.length?reasonLines.map(s=>"   "+s):["   —"])]},
+    {ph:2,L:["Estudos incluídos na revisão (n = "+fmtN(c.inc)+")"],R:null}
+  ];
+  let y=50;const gap=30;const out=[];const phY=[[],[],[]];
+  const txt=(x,yy,s,bold)=>`<text x="${x}" y="${yy}" ${bold?'class="h"':""} ${print?`fill="${col.ink}" font-family="Helvetica, Arial, sans-serif" font-size="12.5" ${bold?'font-weight="600"':""}`:""} xml:space="preserve">${esc(s)}</text>`;
+  const rect=(x,yy,w,h,side)=>`<rect x="${x}" y="${yy}" width="${w}" height="${h}" rx="3" class="bx ${side?"side":""}" ${print?`fill="${side?col.side:col.bg}" stroke="${col.line}"`:""}/>`;
+  const arrow=(x1,y1,x2,y2)=>`<path d="M${x1} ${y1} L${x2} ${y2}" class="ar" ${print?`stroke="${col.mut}" fill="none" stroke-width="1.2"`:""}/><path d="M${x2} ${y2} l${x2>x1?-7:-4} ${x2>x1?-4:-7} l${x2>x1?0:8} ${x2>x1?8:0} z" class="arh" ${print?`fill="${col.mut}"`:""}/>`;
+  let prevBottom=null;
+  boxes.forEach((b,i)=>{
+    const hL=pad*2+b.L.length*lh-4,hR=b.R?pad*2+b.R.length*lh-4:0,h=Math.max(hL,hR);
+    out.push(rect(LX,y,LW,h));b.L.forEach((s,j)=>out.push(txt(LX+12,y+pad+12+j*lh,s,j===0)));
+    if(b.R){out.push(rect(RX,y,RW,h,true));b.R.forEach((s,j)=>out.push(txt(RX+12,y+pad+12+j*lh,s,j===0)));out.push(arrow(LX+LW,y+h/2,RX-2,y+h/2))}
+    if(prevBottom!=null)out.push(arrow(LX+LW/2,prevBottom,LX+LW/2,y-2));
+    phY[b.ph].push(y,y+h);prevBottom=y+h;y+=h+gap;
+  });
+  const names=["IDENTIFICAÇÃO","TRIAGEM","INCLUÍDOS"];
+  const phases=phY.map((ys,i)=>{const a=Math.min(...ys),b=Math.max(...ys);const cx=50,cy=(a+b)/2;
+    return`<rect x="30" y="${a}" width="40" height="${b-a}" rx="3" class="phase" ${print?`fill="${col.ph}"`:""}/><text x="${cx}" y="${cy}" transform="rotate(-90 ${cx} ${cy})" text-anchor="middle" dominant-baseline="middle" class="phase-t" ${print?`fill="${col.pht}" font-family="Helvetica, Arial, sans-serif" font-size="11" letter-spacing="1"`:""}>${names[i]}</text>`}).join("");
+  const H=y-gap+20;
+  const head=`<rect x="${LX}" y="10" width="${RX+RW-LX}" height="26" rx="3" class="phase" ${print?`fill="${col.ph}"`:""}/>${`<text x="${(LX+RX+RW)/2}" y="27" text-anchor="middle" class="phase-t" ${print?`fill="${col.pht}" font-family="Helvetica, Arial, sans-serif" font-size="11" letter-spacing="1"`:""}>IDENTIFICAÇÃO DE ESTUDOS VIA BASES DE DADOS E REGISTROS</text>`}`;
+  return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Fluxograma PRISMA 2020">${print?`<rect width="${W}" height="${H}" fill="#FFFFFF"/>`:""}${head}${phases}${out.join("")}</svg>`;
+}
+function renderPrisma(){
+  const c=prismaCounts();
+  $("#flow").innerHTML=flowSVG(c,false);
+  const warn=[];
+  if(!c.total)warn.push("Ainda não há registros importados. O fluxograma mostra zeros até a importação.");
+  if(c.taPend)warn.push(fmtN(c.taPend)+" registros ainda estão na triagem de títulos e resumos (pendentes ou em conflito).");
+  if(c.ftPend)warn.push(fmtN(c.ftPend)+" relatórios ainda estão em avaliação do texto completo.");
+  if(c.reasons["Sem motivo"])warn.push(c.reasons["Sem motivo"]+" exclusões no texto completo estão sem motivo. O PRISMA pede o motivo de cada exclusão.");
+  $("#flow-warn").innerHTML=warn.length?`<div class="callout warn">${warn.map(esc).join("<br>")}</div>`:"";
+  const per={};const add=(s,k)=>{(per[s]??=({id:0,dup:0,auto:0,scr:0,ta:0,inc:0}))[k]++};
+  F.recs.forEach(r=>{add(r.src,"id");if(F.dupOf[r.k])add(r.src,"dup");else if(F.auto[r.k])add(r.src,"auto");else{add(r.src,"scr");if(F.ta[r.k]?.s==="inc")add(r.src,"ta");if(F.ft[r.k]?.s==="inc")add(r.src,"inc")}});
+  const rows=Object.entries(per).sort((a,b)=>b[1].id-a[1].id);
+  const autoReasons={};Object.values(F.auto).forEach(v=>{const k=v.split(":")[0];autoReasons[k]=(autoReasons[k]||0)+1});
+  $("#funnel").innerHTML=rows.length?`<div class="tbl"><table><thead><tr><th>Base</th><th class="num">Identificados</th><th class="num">Duplicados</th><th class="num">Filtro automático</th><th class="num">Triados</th><th class="num">Passaram T/R</th><th class="num">Incluídos</th></tr></thead><tbody>${
+    rows.map(([s,v])=>`<tr><td>${esc(KNOWN_SOURCES[s]||s)}</td><td class="num">${fmtN(v.id)}</td><td class="num">${fmtN(v.dup)}</td><td class="num">${fmtN(v.auto)}</td><td class="num">${fmtN(v.scr)}</td><td class="num">${fmtN(v.ta)}</td><td class="num">${fmtN(v.inc)}</td></tr>`).join("")
+  }</tbody></table></div>${Object.keys(autoReasons).length?`<p class="note">Filtro automático por motivo: ${Object.entries(autoReasons).map(([k,n])=>esc(k)+" ("+fmtN(n)+")").join(" · ")}</p>`:""}`:`<div class="empty"><b>Sem registros</b>O funil por base aparece depois da primeira importação.</div>`;
+}
+function csvRow(a){return a.map(v=>{v=String(v??"");return/[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")}
+function exportIncluded(){
+  const inc=F.ftPool.filter(r=>F.ft[r.k].s==="inc");
+  const lines=[csvRow(["id","source_db","title","authors","year","venue","doi","url","abstract"])];
+  inc.forEach((r,i)=>lines.push(csvRow(["S"+String(i+1).padStart(2,"0"),r.src,r.t,r.a,r.y,r.v,r.doi,r.u,r.ab])));
+  download("estudos_incluidos.csv","\uFEFF"+lines.join("\n"),"text/csv");
+}
+function exportAll(){
+  const ids=[S.project.slots.r1,S.project.slots.r2];
+  const lines=[csvRow(["source_db","title","year","doi","etapa_removido","motivo_automatico","duplicado_de","ta_r1","ta_r2","ta_ia","ta_consenso","ta_final","ft_r1","ft_r2","ft_consenso","ft_final","ft_motivo"])];
+  F.recs.forEach(r=>{
+    const vt=id=>id?S.votes.ta[id]?.[r.k]:null,vf=id=>id?S.votes.ft[id]?.[r.k]:null;
+    const fv=v=>v?v.d+(v.r?":"+v.r:""):"";
+    const dup=F.dupOf[r.k],auto=F.auto[r.k];
+    const dupT=dup?F.byK[dup]?.t||"":"";
+    lines.push(csvRow([r.src,r.t,r.y,r.doi,dup?"duplicado":auto?"filtro automático":"",auto||"",dupT,fv(vt(ids[0])),fv(vt(ids[1])),S.ai[r.k]?S.ai[r.k].d+(S.ai[r.k].c?":"+S.ai[r.k].c:""):"",fv(S.cons.ta[r.k]),F.ta[r.k]?.s||"",fv(vf(ids[0])),fv(vf(ids[1])),fv(S.cons.ft[r.k]),F.ft[r.k]?.s||"",F.ft[r.k]?.r||""]));
+  });
+  download("decisoes_triagem.csv","\uFEFF"+lines.join("\n"),"text/csv");
+}
+
+/* ---------- uso de IA ---------- */
+function metrics(){
+  const [a,b]=[S.project.slots.r1,S.project.slots.r2];
+  const pairs=[];if(a&&b)F.screen.forEach(r=>{const x=S.votes.ta[a]?.[r.k],y=S.votes.ta[b]?.[r.k];if(x&&y)pairs.push([INC(x.d),INC(y.d)])});
+  const k=kappa(pairs);const agree=pairs.length?pairs.filter(([x,y])=>x===y).length/pairs.length:null;
+  let tp=0,fn=0,fp=0,tn=0;
+  F.screen.forEach(r=>{const ai=S.ai[r.k];const fin=F.ta[r.k];if(!ai||!["inc","exc"].includes(fin.s))return;const ai1=INC(ai.d),h=fin.s==="inc";if(ai1&&h)tp++;else if(!ai1&&h)fn++;else if(ai1&&!h)fp++;else tn++});
+  const sens=tp+fn?tp/(tp+fn):null,spec=fp+tn?tn/(fp+tn):null;
+  return{pairs:pairs.length,k,agree,tp,fn,fp,tn,sens,spec,aiN:tp+fn+fp+tn};
+}
+const pct=v=>v==null?"—":(v*100).toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
+function renderIA(){
+  const m=metrics();
+  $("#metrics").innerHTML=`
+    <div class="m"><b>${m.k==null?"—":m.k.toLocaleString("pt-BR",{maximumFractionDigits:2})}</b><span>Kappa de Cohen entre revisores (${fmtN(m.pairs)} registros)</span></div>
+    <div class="m"><b>${pct(m.agree)}</b><span>Concordância bruta entre revisores</span></div>
+    <div class="m"><b>${pct(m.sens)}</b><span>Sensibilidade da IA: incluídos pelos humanos que a IA não excluiu</span></div>
+    <div class="m"><b>${pct(m.spec)}</b><span>Especificidade da IA (${fmtN(m.aiN)} registros com sugestão e decisão final)</span></div>
+    <div class="m"><b>${fmtN(m.fn)}</b><span>Falsos negativos da IA: estudos que ela teria excluído e os humanos incluíram</span></div>`;
+  const log=S.project.aiLog||[];
+  $("#log").innerHTML=log.length?`<div class="tbl"><table><thead><tr><th>Data</th><th>Etapa</th><th>Ferramenta</th><th>O que fez</th><th>Verificação</th><th></th></tr></thead><tbody>${
+    log.map(l=>`<tr><td class="mono">${esc(l.date)}</td><td>${esc(l.stage)}</td><td><b>${esc(l.tool)}</b>${l.auto?' <span class="pill pend">automático</span>':""}</td><td>${esc(l.what)}</td><td>${esc(l.check)||'<span style="color:var(--stop)">Não informada</span>'}</td><td><button class="link" data-rml="${l.id}">Remover</button></td></tr>`).join("")
+  }</tbody></table></div>`:`<div class="empty"><b>Nenhum uso de IA registrado</b>Se usou o pipeline com o Claude Haiku para triar títulos, registre aqui com a versão do modelo.</div>`;
+  $$("#log [data-rml]").forEach(b=>b.onclick=()=>{S.project.aiLog=S.project.aiLog.filter(l=>l.id!==b.dataset.rml);queue("project/main",{aiLog:S.project.aiLog},"update");renderIA()});
+  $("#decl").textContent=buildDecl(m);
+}
+function lower1(t){t=String(t||"").trim().replace(/[.;]\s*$/,"");return t.charAt(0).toLowerCase()+t.slice(1)}
+function buildDecl(m){
+  const log=S.project.aiLog||[];const mode=+P().reviewers===1?1:2;
+  if(!log.length)return"Nenhuma ferramenta de inteligência artificial generativa foi utilizada na condução desta revisão sistemática.\n\n(Quando houver usos registrados, este texto é substituído por uma declaração detalhada.)";
+  let t=log.map(l=>`Na etapa de ${lower1(l.stage)}, utilizou-se ${l.tool} para ${lower1(l.what)}.`+(l.check?` ${l.check.trim().replace(/\.?$/,".")}`:"")).join("\n\n");
+  if(m.aiN>=10)t+=`\n\nComparadas às decisões finais dos revisores em ${fmtN(m.aiN)} registros, as sugestões da IA tiveram sensibilidade de ${pct(m.sens)} e especificidade de ${pct(m.spec)}.`;
+  if(m.k!=null)t+=` A concordância entre os revisores na triagem de títulos e resumos foi de ${pct(m.agree)} (kappa de Cohen = ${m.k.toLocaleString("pt-BR",{maximumFractionDigits:2})}).`;
+  t+=`\n\nAs decisões de inclusão e exclusão foram tomadas por ${mode===1?"um revisor humano":"dois revisores humanos independentes, com divergências resolvidas por consenso"}. Os autores revisaram todo o conteúdo produzido com apoio de IA e assumem total responsabilidade pela publicação. Nenhuma ferramenta de IA foi listada como autora.`;
+  return t;
+}
+function iaEvents(){
+  $("#log-form").addEventListener("submit",e=>{e.preventDefault();
+    const tool=$("#l-tool").value.trim(),what=$("#l-what").value.trim(),check=$("#l-check").value.trim();
+    if(!tool||!what){$("#l-err").textContent="Preencha a ferramenta e o que a IA fez.";return}
+    S.project.aiLog=[...(S.project.aiLog||[]),{id:uid(),date:today(),stage:$("#l-stage").value,tool,what,check}];
+    queue("project/main",{aiLog:S.project.aiLog},"update");
+    $("#l-tool").value=$("#l-what").value=$("#l-check").value="";$("#l-err").textContent=check?"":"Lembre de dizer como o resultado foi verificado.";renderIA()});
+  $("#copy-decl").onclick=()=>copyText($("#decl").textContent);
+}
+
+/* ---------- utilitários ---------- */
+async function copyText(t){try{await navigator.clipboard.writeText(t);toast("Copiado.")}catch(e){showText("Copie o texto",t)}}
+let dl=null;
+async function download(name,data,type){
+  if(dl===null){try{dl=(await window.claude?.use?.("downloads"))||false}catch(e){dl=false}}
+  if(dl){try{const r=await dl.save({filename:name,data:data instanceof Blob?data:new Blob([data],{type})});if(r&&r.status==="saved")toast("Arquivo salvo: "+name);return}catch(e){if(e&&e.code==="cancelled")return}}
+  if(data instanceof Blob){toast("Não foi possível baixar o arquivo nesta visualização.");return}
+  showText(name,data);
+}
+function downloadBlob(name,blob){return download(name,blob,blob.type)}
+function showText(title,text){
+  const m=document.createElement("div");m.className="modal";
+  m.innerHTML=`<div class="in" role="dialog" aria-label="${esc(title)}"><div class="row" style="justify-content:space-between"><h2>${esc(title)}</h2><button class="btn ghost small" data-x>Fechar</button></div><p class="note">Não foi possível baixar o arquivo aqui. Selecione o texto abaixo e copie.</p><textarea readonly>${esc(text)}</textarea></div>`;
+  document.body.appendChild(m);m.querySelector("[data-x]").onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove()};
+  const ta=m.querySelector("textarea");ta.focus();ta.select();
+}
+
+/* ---------- abas ---------- */
+function show(v){S.view=v;$$("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));["protocolo","importar","ta","ft","ex","prisma","ia"].forEach(n=>$("#v-"+n).hidden=n!==v);renderAll();try{localStorage.setItem("bancada-view",v)}catch(e){}}
+$$("#tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
+$("#exp-svg").onclick=()=>download("fluxograma_prisma_2020.svg",flowSVG(prismaCounts(),true),"image/svg+xml");
+$("#exp-inc").onclick=exportIncluded;$("#exp-all").onclick=exportAll;
+
+protoEvents();importEvents();iaEvents();
+derive();
+try{const v=localStorage.getItem("bancada-view");if(v&&$("#v-"+v))S.view=v;if(localStorage.getItem("bancada-pmode")==="doc")S.pmode="doc"}catch(e){}
+show(S.view);
+connect().then(async()=>{try{isOwnerCache=await userApi?.isOwner()}catch(e){}renderAll()});
+</script>
