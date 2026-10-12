@@ -163,3 +163,35 @@ DATABASES = {
     "taylor_francis": {"how": "manual", "key_env": None,               "connector": "exportação BibTeX -> data/manual_exports/tandf_*.bib"},
     "google_scholar": {"how": "manual", "key_env": None,               "connector": "Publish or Perish -> data/manual_exports/google_scholar_*.csv"},
 }
+
+
+# ---------------------------------------------------------------------------
+# Protocolo da Bancada PRISMA
+# Se existir protocolo.json na raiz (exportado pela Bancada), ele substitui
+# os valores acima. Assim a busca e os critérios ficam sempre iguais ao
+# protocolo, sem editar este arquivo.
+# ---------------------------------------------------------------------------
+try:
+    import protocol as _protocol
+
+    if _protocol.has_protocol():
+        _p = _protocol.load()
+        _blocks = _protocol.search_blocks(_p)
+        if _blocks:
+            SEARCH_BLOCKS = _blocks
+        YEAR_FROM = _protocol.year_from(_p)
+        YEAR_TO = _protocol.year_to(_p)
+        _langs = _protocol.languages(_p)
+        if _langs:
+            LANGUAGE = {"english": "en", "inglês": "en", "portuguese": "pt",
+                        "português": "pt", "spanish": "es", "espanhol": "es"}.get(_langs[0].lower(), _langs[0][:2].lower())
+        INCLUSION_CRITERIA = {c["c"]: c.get("t", "") for c in _protocol.criteria("ic", _p)}
+        EXCLUSION_CRITERIA = {c["c"]: c.get("t", "") for c in _protocol.criteria("ec", _p)}
+        PROTOCOL_LOADED = True
+    else:
+        PROTOCOL_LOADED = False
+except SystemExit:
+    raise
+except Exception as _e:  # protocolo malformado: avisa e segue com os valores acima
+    print(f"[config] Não foi possível ler protocolo.json: {_e}. Usando os valores do config.py.")
+    PROTOCOL_LOADED = False

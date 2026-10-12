@@ -1,3 +1,29 @@
+# PipelineRSL
+
+Fork de [jsaranda/LiteraturaReviewPipeline](https://github.com/jsaranda/LiteraturaReviewPipeline), adaptado para trabalhar dirigido por protocolo com a **Bancada PRISMA**.
+
+## O que muda neste fork
+
+- **`protocolo.json`**: exportado pela Bancada, passa a ser a fonte da verdade (string, campos, anos, idiomas, tipos de documento, critérios e livro de códigos). Com ele na raiz, `config.py` e os conectores do **Scopus** e do **IEEE Xplore** montam as queries e os filtros da API a partir do protocolo. Sem ele, tudo funciona como no original.
+- **`connectors/*_bancada.csv`**: além do CSV padrão, os conectores gravam uma versão com tipo de documento e palavras-chave para importar na Bancada.
+- **`pipeline/criteria_report.py`**: pré-avalia cada critério IC/EC com as mesmas regras da Bancada (S / N / ? e o trecho que justifica). Não exclui nada.
+- **Decisão humana**: a triagem e a extração são feitas na Bancada, com dois revisores. As etapas de triagem por LLM (06, 07, 11, 12) continuam no repositório, mas são opcionais e não fazem parte do fluxo padrão deste fork.
+
+Guia completo: [docs/PASSO_A_PASSO.md](docs/PASSO_A_PASSO.md).
+
+```bash
+cp .env.example .env            # preencha ELSEVIER_API_KEY e IEEE_API_KEY
+# salve o protocolo.json exportado pela Bancada na raiz
+python connectors/scopus.py
+python connectors/ieee_xplore.py
+python pipeline/criteria_report.py   # opcional: confere as regras
+# importe data/raw/*_bancada.csv na Bancada
+```
+
+---
+
+## README original
+
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Status](https://img.shields.io/badge/status-research%20artifact-blue)
 ![Last Commit](https://img.shields.io/github/last-commit/jsaranda/LiteraturaReviewPipeline)

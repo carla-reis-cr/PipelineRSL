@@ -43,9 +43,42 @@ SLEEP_BETWEEN_REQUESTS_S = 1.0  # folga de segurança; ajuste conforme sua cota
 
 def _build_query() -> str:
     """
-    Monta a query no formato Scopus (mesma sintaxe usada na busca do site
-    Scopus). Busca em título+abstract+keywords (TITLE-ABS-KEY).
+    Monta a query da Scopus Search API. Com protocolo.json, usa os campos,
+    anos, tipos de documento e idiomas do protocolo; sem ele, mantém o
+    comportamento original (TITLE-ABS-KEY + anos).
     """
+    import protocol as P
+
+    if P.has_protocol():
+        p = P.load()
+        blocks = list(P.search_blocks(p).values())
+        fs = P.fields(p)
+        combo = {
+            ("title", "abstract", "keywords"): "TITLE-ABS-KEY",
+            ("title", "abstract"): "TITLE-ABS",
+            ("title",): "TITLE",
+            ("abstract",): "ABS",
+            ("keywords",): "KEY",
+        }.get(tuple(fs))
+        one = {"title": "TITLE", "abstract": "ABS", "keywords": "KEY"}
+        ors = ["(" + " OR ".join(P.quote(t) for t in b) + ")" for b in blocks]
+        if combo:
+            query = f"{combo}(" + " AND ".join(ors) + ")"
+        else:
+            query = " AND ".join("(" + " OR ".join(f"{one[f]}{o}" for f in fs) + ")" for o in ors)
+        yf, yt = P.year_from(p), P.year_to(p)
+        if yf:
+            query += f" AND PUBYEAR > {yf - 1}"
+        if yt:
+            query += f" AND PUBYEAR < {yt + 1}"
+        dts = [{"journal": "DOCTYPE(ar)", "conference": "DOCTYPE(cp)"}[d] for d in P.doc_types(p)]
+        if dts:
+            query += " AND (" + " OR ".join(dts) + ")"
+        langs = P.languages(p)
+        if langs:
+            query += " AND (" + " OR ".join(f"LANGUAGE({l.lower()})" for l in langs) + ")"
+        return query
+
     blocks = []
     for terms in SEARCH_BLOCKS.values():
         quoted = [f'"{t}"' for t in terms]
@@ -79,6 +112,17 @@ def _entry_to_paper(entry: dict) -> Paper:
     )
 
 
+def _entry_extras(entry: dict) -> dict:
+    return {
+        "doc_type": entry.get("subtypeDescription", "") or "",
+        "language": "",
+        "keywords": (entry.get("authkeywords", "") or "").replace(" | ", "; "),
+    }
+
+
+EXTRAS: list[dict] = []
+
+
 def search_scopus(start: int = 0, count: int = RESULTS_PER_PAGE,
                    max_records: int | None = None) -> list[Paper]:
     """
@@ -86,6 +130,7 @@ def search_scopus(start: int = 0, count: int = RESULTS_PER_PAGE,
     parou (paginação por offset).
     """
     query = _build_query()
+    print(f"Query Scopus: {query}")
     headers = elsevier_headers()
 
     papers: list[Paper] = []
@@ -108,6 +153,7 @@ def search_scopus(start: int = 0, count: int = RESULTS_PER_PAGE,
                 # Scopus retorna um "entry" de erro quando não há resultados
                 break
             papers.append(_entry_to_paper(entry))
+            EXTRAS.append(_entry_extras(entry))
 
         total_results = int(data.get("opensearch:totalResults", 0))
 
@@ -148,3 +194,6 @@ if __name__ == "__main__":
         for p in results:
             writer.writerow(p.to_dict())
     print(f"Salvo em {out_path}")
+
+    from connectors.bancada_export import write_bancada_csv
+    write_bancada_csv(results, EXTRAS, os.path.join("data", "raw", "scopus_results_bancada.csv"))
