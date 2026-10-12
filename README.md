@@ -40,7 +40,7 @@ tests/                       testes (vitest)
 
 1. **Supabase:** crie um projeto em supabase.com. No SQL Editor, rode `web/supabase/migrations/0001_schema.sql`. Em Authentication › URL Configuration, cadastre a URL do site na Vercel e `https://SEU-SITE/auth/callback` como redirect.
 2. **Vercel:** importe este repositório, com **Root Directory = `web`**. Em Environment Variables, preencha as chaves de `web/.env.example`:
-   - `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Supabase › Project Settings › API)
+   - `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Supabase › Project Settings › API)
    - `ELSEVIER_API_KEY` (e `ELSEVIER_INST_TOKEN`, se for usar fora da rede da instituição)
    - `IEEE_API_KEY`
 3. Faça o deploy, entre com seu e-mail (link mágico) e crie a revisão com o `protocolo.json`.
