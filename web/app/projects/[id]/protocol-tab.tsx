@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { FIELD_NAMES, parseCodes, RULE_LABELS } from "@/lib/criteria";
 import { EXAMPLE_PROTOCOL, migrateProtocol } from "@/lib/defaults";
 import { download } from "@/lib/download";
@@ -26,9 +26,39 @@ function useField() {
   return { text, check };
 }
 
+const SECTIONS = [
+  { id: "geral", label: "Objetivo e questões" },
+  { id: "busca", label: "Busca" },
+  { id: "criterios", label: "Critérios e qualidade" },
+  { id: "triagem", label: "Triagem e extração" },
+] as const;
+type Section = (typeof SECTIONS)[number]["id"];
+/** Em que aba do formulário está cada destino do checklist. */
+const SECTION_OF: Record<string, Section> = { "sec-questoes": "geral", "sec-recorte": "busca", "sec-idioma": "busca", "sec-criterios": "criterios", "sec-qualidade": "criterios", "sec-triagem": "triagem" };
+
 export default function ProtocolTab({ goTab }: { goTab: (tab: "prisma") => void }) {
   const { protocol: p } = useB();
   const [mode, setMode] = useState<"edit" | "doc">("edit");
+  const [section, setSection] = useState<Section>("geral");
+  const [pending, setPending] = useState<string | null>(null);
+  const todo = useMemo(() => {
+    const n: Partial<Record<Section, number>> = {};
+    for (const x of protocolChecklist(p)) { const s = SECTION_OF[x.target]; if (!x.ok && s) n[s] = (n[s] ?? 0) + 1; }
+    return n;
+  }, [p]);
+
+  // o campo de destino só existe depois que a aba certa é desenhada
+  useEffect(() => {
+    if (!pending || mode !== "edit") return;
+    goToSection(pending);
+    setPending(null);
+  }, [pending, section, mode]);
+  function onGo(target: string) {
+    if (target.startsWith("tab:")) return goTab(target.slice(4) as "prisma");
+    setMode("edit");
+    setSection(SECTION_OF[target] ?? section);
+    setPending(target);
+  }
   return (
     <section className="stack">
       <div className="seg" role="group" aria-label="Modo do protocolo">
@@ -36,7 +66,21 @@ export default function ProtocolTab({ goTab }: { goTab: (tab: "prisma") => void 
         <button aria-pressed={mode === "doc"} onClick={() => setMode("doc")}>Ver documento</button>
         <span className="note">{p.updatedAt ? "Última alteração em " + fmtDate(p.updatedAt) : ""}</span>
       </div>
-      {mode === "edit" ? <div className="cols"><ProtocolForm /><aside className="stack sticky"><Checklist goTab={goTab} /><Strings /><Exports /></aside></div> : <DocView />}
+      {mode === "edit" ? (
+        <div className="cols">
+          <div className="stack">
+            <nav className="tabs" role="tablist" aria-label="Seções do protocolo">
+              {SECTIONS.map((x) => (
+                <button key={x.id} role="tab" aria-selected={section === x.id} onClick={() => setSection(x.id)}>
+                  {x.label}{todo[x.id] ? <span className="badge warn" title="Itens pendentes no checklist">{todo[x.id]}</span> : null}
+                </button>
+              ))}
+            </nav>
+            <ProtocolForm section={section} />
+          </div>
+          <aside className="stack sticky side"><Checklist onGo={onGo} /><Exports /></aside>
+        </div>
+      ) : <DocView />}
     </section>
   );
 }
@@ -60,13 +104,15 @@ function Rm({ list, i, label, x }: { list: ListKey; i: number; label: string; x?
   return <button className="btn danger small" style={x ? undefined : { alignSelf: "flex-end" }} aria-label={label} disabled={!canWrite} onClick={() => updateProtocol((d) => { (d[list] as unknown[]).splice(i, 1); })}>{x ? "×" : "Remover"}</button>;
 }
 
-function ProtocolForm() {
+function ProtocolForm({ section }: { section: Section }) {
   const { protocol: p, updateProtocol, canWrite } = useB();
   const { text, check } = useField();
   const empty = !p.title && !(p.blocks || []).some((b) => termsOf(b).length);
 
   return (
     <div className="stack">
+      {section === "geral" && (
+        <>
       {empty && canWrite && (
         <div className="callout warn">Ainda sem protocolo? <button className="link" onClick={() => updateProtocol((d) => { Object.assign(d, migrateProtocol(structuredClone(EXAMPLE_PROTOCOL))); })}>Carregar um protocolo de exemplo</button> e editar à vontade.</div>
       )}
@@ -106,6 +152,10 @@ function ProtocolForm() {
         <Add list="sqs">Adicionar questão secundária</Add>
       </div>
 
+        </>
+      )}
+      {section === "busca" && (
+        <>
       <div className="panel">
         <header><h2>Estratégia de busca</h2><p>Cada bloco é um termo principal com seus termos alternativos (OR). Os blocos se combinam com AND. Use * para truncar, como em <span className="mono">competenc*</span>.</p></header>
         <label className="f">Texto de apresentação da string<textarea rows={2} {...text("searchIntro")} /></label>
@@ -147,22 +197,7 @@ function ProtocolForm() {
         </div>
         <label className="f" id="sec-recorte">Justificativa do recorte temporal<textarea rows={2} {...text("yearText")} placeholder="Ex.: a partir de 2023, quando a IA generativa passou a ser usada em larga escala no ensino; ou sem corte, para mapear toda a produção" /></label>
         <label className="f">Justificativa do idioma (opcional)<textarea rows={2} {...text("langsText")} placeholder="Ex.: inglês é o idioma predominante das publicações indexadas nas bases escolhidas" /></label>
-      </div>
-
-      <div className="panel" id="sec-criterios">
-        <header><h2>Critérios de elegibilidade</h2><p>Os códigos EC viram os motivos de exclusão na triagem e no fluxograma.</p></header>
-        {(["ic", "ec"] as const).map((k) => (
-          <div className="stack" style={{ gap: 8 }} key={k}>
-            <h3>{k === "ic" ? "Inclusão" : "Exclusão"}</h3>
-            {(p[k] || []).map((c, i) => (
-              <div className="crit-wrap" key={i}>
-                <div className="crit"><input type="text" className="code" aria-label="Código" {...text(`${k}.${i}.c`)} /><textarea rows={2} aria-label="Descrição" {...text(`${k}.${i}.t`)} /><Rm list={k} i={i} label="Remover critério" x /></div>
-                <RuleEditor kind={k} i={i} c={c} />
-              </div>
-            ))}
-            <Add list={k}>Adicionar critério de {k === "ic" ? "inclusão" : "exclusão"}</Add>
-          </div>
-        ))}
+        <Strings />
       </div>
 
       <div className="panel">
@@ -182,14 +217,24 @@ function ProtocolForm() {
         <label className="f">Finalidade das bases complementares<input type="text" {...text("compPurpose")} placeholder="Ex.: para avaliar o índice de sobreposição" /></label>
       </div>
 
-      <div className="panel" id="sec-triagem">
-        <header><h2>Triagem e divergências</h2><p>Quem avalia os registros e o que acontece quando os revisores discordam.</p></header>
-        <div className="grid2">
-          <label className="f">Revisores na triagem<select {...text("reviewers")} value={String(p.reviewers) === "1" ? "1" : "2"}><option value="2">Dois revisores independentes</option><option value="1">Um revisor</option></select></label>
-          <label className="check"><input {...check("blind")} /><span>Triagem cega: a decisão do outro revisor só aparece depois que você votou no mesmo registro</span></label>
-        </div>
-        <label className="f">Quem faz a triagem<input type="text" {...text("team")} placeholder="Ex.: a autora (Revisor 1) e o orientador (Revisor 2)" /></label>
-        {String(p.reviewers) !== "1" && <label className="f">Como as divergências são resolvidas<textarea rows={2} {...text("conflicts")} /></label>}
+        </>
+      )}
+      {section === "criterios" && (
+        <>
+      <div className="panel" id="sec-criterios">
+        <header><h2>Critérios de elegibilidade</h2><p>Os códigos EC viram os motivos de exclusão na triagem e no fluxograma.</p></header>
+        {(["ic", "ec"] as const).map((k) => (
+          <div className="stack" style={{ gap: 8 }} key={k}>
+            <h3>{k === "ic" ? "Inclusão" : "Exclusão"}</h3>
+            {(p[k] || []).map((c, i) => (
+              <div className="crit-wrap" key={i}>
+                <div className="crit"><input type="text" className="code" aria-label="Código" {...text(`${k}.${i}.c`)} /><textarea rows={2} aria-label="Descrição" {...text(`${k}.${i}.t`)} /><Rm list={k} i={i} label="Remover critério" x /></div>
+                <RuleEditor kind={k} i={i} c={c} />
+              </div>
+            ))}
+            <Add list={k}>Adicionar critério de {k === "ic" ? "inclusão" : "exclusão"}</Add>
+          </div>
+        ))}
       </div>
 
       <div className="panel" id="sec-qualidade">
@@ -198,6 +243,20 @@ function ProtocolForm() {
           <div className="crit" key={i}><input type="text" className="code" aria-label="Código" {...text(`qa.${i}.c`)} /><textarea rows={2} aria-label="Critério de qualidade" {...text(`qa.${i}.t`)} placeholder="Ex.: Os objetivos do estudo estão claramente descritos?" /><Rm list="qa" i={i} label="Remover critério de qualidade" x /></div>
         ))}
         <Add list="qa">Adicionar critério de qualidade</Add>
+      </div>
+
+        </>
+      )}
+      {section === "triagem" && (
+        <>
+      <div className="panel" id="sec-triagem">
+        <header><h2>Triagem e divergências</h2><p>Quem avalia os registros e o que acontece quando os revisores discordam.</p></header>
+        <div className="grid2">
+          <label className="f">Revisores na triagem<select {...text("reviewers")} value={String(p.reviewers) === "1" ? "1" : "2"}><option value="2">Dois revisores independentes</option><option value="1">Um revisor</option></select></label>
+          <label className="check"><input {...check("blind")} /><span>Triagem cega: a decisão do outro revisor só aparece depois que você votou no mesmo registro</span></label>
+        </div>
+        <label className="f">Quem faz a triagem<input type="text" {...text("team")} placeholder="Ex.: a autora (Revisor 1) e o orientador (Revisor 2)" /></label>
+        {String(p.reviewers) !== "1" && <label className="f">Como as divergências são resolvidas<textarea rows={2} {...text("conflicts")} /></label>}
       </div>
 
       <div className="panel">
@@ -214,6 +273,8 @@ function ProtocolForm() {
           <label className="f">Excluir artigos com até N páginas (0 desliga)<input type="number" min={0} {...text("shortPages")} /></label>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
@@ -260,33 +321,49 @@ function RuleEditor({ kind, i, c }: { kind: "ic" | "ec"; i: number; c: Criterion
   );
 }
 
+/** String de busca de uma base, escolhida na lista; fica dentro da seção Estratégia de busca. */
 function Strings() {
   const { protocol: p, updateProtocol, canWrite, toast } = useB();
-  const [editing, setEditing] = useState<string | null>(null);
-  const strs = useMemo(() => buildStrings(p, true), [p]);
-  const setCustom = (id: string, v: string) => updateProtocol((d) => { const s = d.sources?.find((x) => x.id === id); if (s) s.custom = v; });
+  const listed = (p.sources || []).map((x) => x.id).filter(Boolean);
+  const [pick, setPick] = useState("");
+  const [editing, setEditing] = useState(false);
+  const id = pick || listed[0] || "generic";
+  const isListed = listed.includes(id);
+  const name = (x: string) => (x === "generic" ? "Genérica (sem sintaxe de base)" : SOURCE_LABELS[x as keyof typeof SOURCE_LABELS] ?? x);
+  const str = useMemo(() => {
+    if (id === "generic") return buildStrings(p, true).find((x) => x.id === "generic");
+    // base que não está nas fontes do protocolo: gera a string na hora, só para copiar
+    return buildStrings(isListed ? p : { ...p, sources: [{ id, role: "main" as const }] }).find((x) => x.id === id);
+  }, [p, id, isListed]);
+  const setCustom = (v: string) => updateProtocol((d) => { const src = d.sources?.find((x) => x.id === id); if (src) src.custom = v; });
+  const others = Object.keys(SOURCE_LABELS).filter((x) => !listed.includes(x));
   return (
-    <div className="panel">
-      <header><h2>String por base</h2></header>
-      <p className="note">Montada a partir dos blocos, dos campos, dos anos, do idioma e dos tipos de documento, na sintaxe de cada base. Para ajustar uma delas à mão, use Editar.</p>
-      <div className="strings">
-        {strs.length ? strs.map((s) => (
-          <div className="string" key={s.id}>
-            <div className="h">
-              <span>{s.label}{s.role === "comp" && <> <span className="pill pend">complementar</span></>}{s.custom && <> <span className="pill may">editada</span></>}</span>
-              <span className="row" style={{ gap: 8 }}>
-                {s.id !== "generic" && canWrite && <button className="link" onClick={() => setEditing(editing === s.id ? null : s.id)}>{editing === s.id ? "Concluir" : "Editar"}</button>}
-                {s.custom && canWrite && <button className="link" onClick={() => { setCustom(s.id, ""); setEditing(null); }}>Restaurar</button>}
-                <button className="link" onClick={() => copyText(s.s, toast)}>Copiar</button>
-              </span>
-            </div>
-            {editing === s.id
-              ? <textarea className="strta" rows={7} autoFocus aria-label={"String para " + s.label} value={s.s} onChange={(e) => setCustom(s.id, e.target.value.trim() === s.auto ? "" : e.target.value)} />
-              : <pre>{s.s}</pre>}
-            {s.notes.length > 0 && <div className="note" style={{ padding: "0 10px 8px" }}>{s.notes.join(" ")}</div>}
+    <div className="exsec" id="sec-strings">
+      <header><h3>String por base</h3></header>
+      <p className="note">Montada a partir dos blocos, dos campos, dos anos, do idioma e dos tipos de documento, na sintaxe da base escolhida. Para ajustar uma delas à mão, use Editar.</p>
+      <label className="f">Base
+        <select value={id} onChange={(e) => { setPick(e.target.value); setEditing(false); }}>
+          {listed.length > 0 && <optgroup label="Bases do protocolo">{[...new Set(listed)].map((x) => <option key={x} value={x}>{name(x)}</option>)}</optgroup>}
+          <optgroup label="Outras bases">{others.map((x) => <option key={x} value={x}>{name(x)}</option>)}</optgroup>
+          <optgroup label="Sem sintaxe de base"><option value="generic">{name("generic")}</option></optgroup>
+        </select>
+      </label>
+      {str ? (
+        <div className="string">
+          <div className="h">
+            <span>{str.label}{str.role === "comp" && <> <span className="pill pend">complementar</span></>}{str.custom && <> <span className="pill may">editada</span></>}{!isListed && id !== "generic" && <> <span className="pill pend">fora das fontes</span></>}</span>
+            <span className="row" style={{ gap: 8 }}>
+              {isListed && canWrite && <button className="link" onClick={() => setEditing(!editing)}>{editing ? "Concluir" : "Editar"}</button>}
+              {str.custom && canWrite && <button className="link" onClick={() => { setCustom(""); setEditing(false); }}>Restaurar</button>}
+              <button className="link" onClick={() => copyText(str.s, toast)}>Copiar</button>
+            </span>
           </div>
-        )) : <div className="empty"><b>Nenhum termo ainda</b>Preencha os blocos da estratégia de busca para montar as strings.</div>}
-      </div>
+          {editing && isListed
+            ? <textarea className="strta" rows={7} autoFocus aria-label={"String para " + str.label} value={str.s} onChange={(e) => setCustom(e.target.value.trim() === str.auto ? "" : e.target.value)} />
+            : <pre>{str.s}</pre>}
+          {(str.notes.length > 0 || (!isListed && id !== "generic")) && <div className="note" style={{ padding: "0 10px 8px" }}>{[...str.notes, ...(!isListed && id !== "generic" ? ["Esta base não está nas Fontes de informação do protocolo; a string serve só para copiar."] : [])].join(" ")}</div>}
+        </div>
+      ) : <div className="empty"><b>Nenhum termo ainda</b>Preencha os blocos da estratégia de busca para montar as strings.</div>}
     </div>
   );
 }
@@ -323,7 +400,7 @@ function goToSection(id: string) {
   field?.focus({ preventScroll: true });
 }
 
-function Checklist({ goTab }: { goTab: (tab: "prisma") => void }) {
+function Checklist({ onGo }: { onGo: (target: string) => void }) {
   const { protocol: p } = useB();
   const items = protocolChecklist(p);
   return (
@@ -332,7 +409,7 @@ function Checklist({ goTab }: { goTab: (tab: "prisma") => void }) {
       <ul className="chk">
         {items.map((x) => (
           <li key={x.label} className={x.ok ? "ok" : "todo"}><span aria-hidden="true">{x.ok ? "✓" : "○"}</span>
-            <button className="chk-go" onClick={() => (x.target.startsWith("tab:") ? goTab(x.target.slice(4) as "prisma") : goToSection(x.target))}><b>{x.label}</b>{x.hint && <span className="note">{x.hint}</span>}</button></li>
+            <button className="chk-go" onClick={() => onGo(x.target)}><b>{x.label}</b>{x.hint && <span className="note">{x.hint}</span>}</button></li>
         ))}
       </ul>
     </div>

@@ -311,3 +311,7 @@ td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabula
 @keyframes flash{from{box-shadow:0 0 0 3px var(--accent)}to{box-shadow:0 0 0 3px transparent}}
 .flash{animation:flash 1.4s ease-out}
 @media (prefers-reduced-motion:reduce){.flash{animation:none;box-shadow:0 0 0 3px var(--accent)}}
+
+/* barra lateral do protocolo: o checklist fica à vista; se a coluna passar da altura da tela, ela rola sozinha */
+.side{max-height:calc(100vh - 20px);overflow:auto}
+@media (max-width:980px){.side{max-height:none;overflow:visible}}
