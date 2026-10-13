@@ -4,7 +4,7 @@ import { FIELD_NAMES, parseCodes, RULE_LABELS } from "@/lib/criteria";
 import { EXAMPLE_PROTOCOL, migrateProtocol } from "@/lib/defaults";
 import { download } from "@/lib/download";
 import { buildStrings, termsOf } from "@/lib/protocol";
-import { buildDocx, docMD, docModel, docText, slug, type DocNode, type ListItem, type Run } from "@/lib/protocol-doc";
+import { buildDocx, docMD, docModel, docText, protocolChecklist, slug, type DocNode, type ListItem, type Run } from "@/lib/protocol-doc";
 import { critKind } from "@/lib/screening";
 import { SOURCE_LABELS, type Criterion, type Field, type Protocol } from "@/lib/types";
 import { getPath, setPath, useB } from "./store";
@@ -26,7 +26,7 @@ function useField() {
   return { text, check };
 }
 
-export default function ProtocolTab() {
+export default function ProtocolTab({ goTab }: { goTab: (tab: "prisma") => void }) {
   const { protocol: p } = useB();
   const [mode, setMode] = useState<"edit" | "doc">("edit");
   return (
@@ -36,12 +36,12 @@ export default function ProtocolTab() {
         <button aria-pressed={mode === "doc"} onClick={() => setMode("doc")}>Ver documento</button>
         <span className="note">{p.updatedAt ? "Última alteração em " + fmtDate(p.updatedAt) : ""}</span>
       </div>
-      {mode === "edit" ? <div className="cols"><ProtocolForm /><aside className="stack sticky"><Strings /><Exports /></aside></div> : <DocView />}
+      {mode === "edit" ? <div className="cols"><ProtocolForm /><aside className="stack sticky"><Checklist goTab={goTab} /><Strings /><Exports /></aside></div> : <DocView />}
     </section>
   );
 }
 
-type ListKey = "sqs" | "blocks" | "ic" | "ec" | "sources";
+type ListKey = "sqs" | "blocks" | "ic" | "ec" | "qa" | "sources";
 
 function Add({ list, children }: { list: ListKey; children: ReactNode }) {
   const { updateProtocol, canWrite } = useB();
@@ -77,7 +77,7 @@ function ProtocolForm() {
         <label className="f">Lógica da revisão (opcional, aparece em destaque no documento)<input type="text" {...text("logic")} placeholder="Ex.: Competência → Evidências → Fontes de Dados → Método de IA → Finalidade" /></label>
       </div>
 
-      <div className="panel">
+      <div className="panel" id="sec-questoes">
         <header><h2>Questões de pesquisa</h2><p>A questão geral orienta a busca e a triagem; as secundárias viram as colunas da extração de dados.</p></header>
         <label className="f">Frase de abertura da tabela<input type="text" {...text("rqIntro")} /></label>
         <div className="rq gq">
@@ -143,11 +143,13 @@ function ProtocolForm() {
         <div className="grid2">
           <label className="f">Ano inicial (vazio = sem limite)<input type="number" {...text("yearFrom")} placeholder="Ex.: 2016" /></label>
           <label className="f">Ano final (vazio = até a data da busca)<input type="number" {...text("yearTo")} /></label>
-          <label className="f">Idiomas aceitos<input type="text" {...text("langs")} placeholder="English" /></label>
+          <label className="f" id="sec-idioma">Idiomas aceitos<input type="text" {...text("langs")} placeholder="English" /></label>
         </div>
+        <label className="f" id="sec-recorte">Justificativa do recorte temporal<textarea rows={2} {...text("yearText")} placeholder="Ex.: a partir de 2023, quando a IA generativa passou a ser usada em larga escala no ensino; ou sem corte, para mapear toda a produção" /></label>
+        <label className="f">Justificativa do idioma (opcional)<textarea rows={2} {...text("langsText")} placeholder="Ex.: inglês é o idioma predominante das publicações indexadas nas bases escolhidas" /></label>
       </div>
 
-      <div className="panel">
+      <div className="panel" id="sec-criterios">
         <header><h2>Critérios de elegibilidade</h2><p>Os códigos EC viram os motivos de exclusão na triagem e no fluxograma.</p></header>
         {(["ic", "ec"] as const).map((k) => (
           <div className="stack" style={{ gap: 8 }} key={k}>
@@ -180,22 +182,36 @@ function ProtocolForm() {
         <label className="f">Finalidade das bases complementares<input type="text" {...text("compPurpose")} placeholder="Ex.: para avaliar o índice de sobreposição" /></label>
       </div>
 
+      <div className="panel" id="sec-triagem">
+        <header><h2>Triagem e divergências</h2><p>Quem avalia os registros e o que acontece quando os revisores discordam.</p></header>
+        <div className="grid2">
+          <label className="f">Revisores na triagem<select {...text("reviewers")} value={String(p.reviewers) === "1" ? "1" : "2"}><option value="2">Dois revisores independentes</option><option value="1">Um revisor</option></select></label>
+          <label className="check"><input {...check("blind")} /><span>Triagem cega: a decisão do outro revisor só aparece depois que você votou no mesmo registro</span></label>
+        </div>
+        <label className="f">Quem faz a triagem<input type="text" {...text("team")} placeholder="Ex.: a autora (Revisor 1) e o orientador (Revisor 2)" /></label>
+        {String(p.reviewers) !== "1" && <label className="f">Como as divergências são resolvidas<textarea rows={2} {...text("conflicts")} /></label>}
+      </div>
+
+      <div className="panel" id="sec-qualidade">
+        <header><h2>Avaliação de qualidade</h2><p>Perguntas respondidas para cada estudo incluído, com Sim (1), Parcialmente (0,5) ou Não (0). A avaliação é feita na aba Extração.</p></header>
+        {(p.qa || []).map((c, i) => (
+          <div className="crit" key={i}><input type="text" className="code" aria-label="Código" {...text(`qa.${i}.c`)} /><textarea rows={2} aria-label="Critério de qualidade" {...text(`qa.${i}.t`)} placeholder="Ex.: Os objetivos do estudo estão claramente descritos?" /><Rm list="qa" i={i} label="Remover critério de qualidade" x /></div>
+        ))}
+        <Add list="qa">Adicionar critério de qualidade</Add>
+      </div>
+
       <div className="panel">
-        <header><h2>Seleção, qualidade e extração</h2><p>Uma etapa por linha. Linhas que começam com número viram lista numerada no documento.</p></header>
+        <header><h2>Etapas de seleção e extração</h2><p>Uma etapa por linha. Linhas que começam com número viram lista numerada no documento. O formulário de extração tem um campo para cada questão secundária cadastrada acima.</p></header>
         <textarea rows={8} aria-label="Etapas de seleção e extração" {...text("selection")} />
       </div>
 
       <div className="panel">
-        <header><h2>Filtros automáticos e equipe</h2><p>Aplicados antes da triagem. Aparecem no fluxograma como removidos por ferramenta automática.</p></header>
+        <header><h2>Filtros automáticos</h2><p>Aplicados antes da triagem. Aparecem no fluxograma como removidos por ferramenta automática.</p></header>
         <label className="f">Tipos de documento excluídos automaticamente (separados por vírgula)<textarea {...text("excludedTypes")} /></label>
         <div className="grid2">
           <label className="check"><input {...check("suspectTitles")} /><span>Excluir títulos de errata, editorial, prefácio, índice e similares</span></label>
           <label className="check"><input {...check("langFilter")} /><span>Excluir idioma fora da lista (quando a base informa o idioma)</span></label>
           <label className="f">Excluir artigos com até N páginas (0 desliga)<input type="number" min={0} {...text("shortPages")} /></label>
-        </div>
-        <div className="grid2">
-          <label className="f">Revisores na triagem<select {...text("reviewers")} value={String(p.reviewers) === "1" ? "1" : "2"}><option value="2">Dois revisores independentes</option><option value="1">Um revisor</option></select></label>
-          <label className="check"><input {...check("blind")} /><span>Triagem cega: a decisão do outro revisor só aparece depois que você votou no mesmo registro</span></label>
         </div>
       </div>
     </div>
@@ -292,6 +308,35 @@ function useExports() {
       catch { toast("Não foi possível gerar o Word agora. Baixe em Markdown ou copie o texto."); }
     },
   };
+}
+
+/** Rola até a seção do formulário e põe o cursor no primeiro campo dela. */
+function goToSection(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
+  el.classList.remove("flash");
+  void el.offsetWidth; // reinicia a animação se a seção já estava marcada
+  el.classList.add("flash");
+  const field = el.matches("input,textarea,select") ? el : el.querySelector<HTMLElement>("input:not([type=checkbox]),textarea,select");
+  field?.focus({ preventScroll: true });
+}
+
+function Checklist({ goTab }: { goTab: (tab: "prisma") => void }) {
+  const { protocol: p } = useB();
+  const items = protocolChecklist(p);
+  return (
+    <div className="panel">
+      <header><h2>O que o protocolo precisa ter</h2><span className="note mono">{items.filter((x) => x.ok).length}/{items.length}</span></header>
+      <ul className="chk">
+        {items.map((x) => (
+          <li key={x.label} className={x.ok ? "ok" : "todo"}><span aria-hidden="true">{x.ok ? "✓" : "○"}</span>
+            <button className="chk-go" onClick={() => (x.target.startsWith("tab:") ? goTab(x.target.slice(4) as "prisma") : goToSection(x.target))}><b>{x.label}</b>{x.hint && <span className="note">{x.hint}</span>}</button></li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function Exports() {

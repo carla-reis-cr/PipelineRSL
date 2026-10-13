@@ -80,12 +80,17 @@ export interface Protocol {
   docTypesText?: string;
   yearFrom?: string | number;
   yearTo?: string | number;
+  yearText?: string;       // justificativa do recorte temporal
   langs?: string;
+  langsText?: string;      // justificativa do idioma
   ic?: Criterion[];
   ec?: Criterion[];
   sources?: ProtocolSource[];
   compPurpose?: string;
   selection?: string;
+  qa?: Criterion[];        // critérios de avaliação de qualidade (QA1, QA2…)
+  team?: string;           // quem faz a triagem
+  conflicts?: string;      // como as divergências são resolvidas
   excludedTypes?: string;
   suspectTitles?: boolean;
   langFilter?: boolean;

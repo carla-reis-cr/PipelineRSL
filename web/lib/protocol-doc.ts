@@ -4,7 +4,7 @@
  */
 import type * as Docx from "docx";
 import { FIELD_NAMES, parseCodes, ruleFields } from "./criteria";
-import { buildStrings, fieldList, fieldsLabel, intOr, quote, termsOf } from "./protocol";
+import { fieldList, fieldsLabel, intOr, quote, termsOf } from "./protocol";
 import { SOURCE_LABELS, type Criterion, type Protocol } from "./types";
 
 export interface Run { text: string; b?: boolean; i?: boolean }
@@ -41,15 +41,7 @@ export function docModel(p: Protocol): DocNode[] {
   if (B.length) {
     M.push({ t: "p", runs: [R("Estrutura da String:", { b: true })] });
     M.push({ t: "table", widths: [28, 72], head: ["Major terms", "Alternative terms"], rows: B.map((b, i) => [[[R(b.name || "Bloco " + (i + 1))]], [[R("( " + termsOf(b).map(quote).join(" OR ") + " )" + (i < B.length - 1 ? " AND" : ""))]]]) });
-    const strs = buildStrings(p);
-    if (strs.length) {
-      M.push({ t: "h2", text: "2.1 String por base de dados" });
-      strs.forEach((s) => {
-        M.push({ t: "p", runs: [R(s.label, { b: true }), R(s.role === "comp" ? " (complementar)" : "")] });
-        M.push({ t: "code", text: s.s });
-        if (s.notes.length) M.push({ t: "small", text: s.notes.join(" ") });
-      });
-    }
+    // as strings na sintaxe de cada base ficam na aba Protocolo, não no documento
   }
 
   M.push({ t: "h", text: "3. Fontes de Informação e Parâmetros (Information Sources)" });
@@ -63,8 +55,9 @@ export function docModel(p: Protocol): DocNode[] {
   items.push({ runs: [R("Campos de Busca: ", { b: true }), R(fieldsLabel(p) + " ("), R(fl.map((f) => fsEn[f]).join(", ").replace(/, ([^,]+)$/, " and $1"), { i: true }), R(").")] });
   if ((p.docTypesText || "").trim()) items.push({ runs: [R("Tipo de Documento: ", { b: true }), R(p.docTypesText!.trim())] });
   const yf = intOr(p.yearFrom), yt = intOr(p.yearTo);
-  if (yf || yt) items.push({ runs: [R("Período: ", { b: true }), R(yf && yt ? `de ${yf} a ${yt}.` : yf ? `de ${yf} até a data da busca.` : `até ${yt}.`)] });
-  if ((p.langs || "").trim()) items.push({ runs: [R("Idioma: ", { b: true }), R(p.langs!.trim() + ".")] });
+  const why = (t?: string) => ((t || "").trim() ? " " + t!.trim().replace(/\.?$/, ".") : "");
+  items.push({ runs: [R("Recorte temporal: ", { b: true }), R((yf && yt ? `de ${yf} a ${yt}.` : yf ? `de ${yf} até a data da busca.` : yt ? `até ${yt}.` : "sem limite de ano.") + why(p.yearText))] });
+  if ((p.langs || "").trim()) items.push({ runs: [R("Idioma dos estudos: ", { b: true }), R(p.langs!.trim() + "." + why(p.langsText))] });
   const dated = src.filter((s) => s.date || s.reported);
   if (dated.length) items.push({ runs: [R("Execução da busca: ", { b: true }), R(dated.map((s) => srcName(s.id) + (s.date ? " em " + new Date(s.date + "T12:00").toLocaleDateString("pt-BR") : "") + (s.reported ? " (" + fmtN(intOr(s.reported)) + " registros)" : "")).join("; ") + ".")] });
   M.push({ t: "ul", items });
@@ -85,8 +78,12 @@ export function docModel(p: Protocol): DocNode[] {
   const crit = (list?: Criterion[]): ListItem[] => (list || []).filter((c) => c.c || c.t).map((c) => ({ runs: [R("(" + c.c + "): ", { b: true }), R(c.t), R(ruleDesc(c), { i: true })] }));
   M.push({ t: "ul", items: [{ runs: [R("Critérios de Inclusão (IC):", { b: true })], children: crit(p.ic) }, { runs: [R("Critérios de Exclusão (EC):", { b: true })], children: crit(p.ec) }] });
 
-  M.push({ t: "h", text: "5. Seleção e Extração de Dados" });
-  M.push({ t: "p", runs: [R("O gerenciamento e a triagem dos dados seguirão o fluxograma PRISMA 2020.")] });
+  M.push({ t: "h", text: "5. Seleção, Qualidade e Extração de Dados" });
+  const two = String(p.reviewers) !== "1";
+  M.push({ t: "h2", text: "5.1 Triagem e resolução de divergências" });
+  M.push({ t: "p", runs: [R("Quem faz a triagem: ", { b: true }), R(((p.team || "").trim() ? p.team!.trim().replace(/\.?$/, ". ") : "") + (two ? `Dois revisores avaliam cada registro de forma independente${p.blind !== false ? ", sem ver a decisão um do outro (triagem cega)" : ""}, nas etapas de título/resumo e de texto completo.` : "Um revisor avalia cada registro, nas etapas de título/resumo e de texto completo."))] });
+  if (two && (p.conflicts || "").trim()) M.push({ t: "p", runs: [R("Divergências: ", { b: true }), R(p.conflicts!.trim())] });
+  M.push({ t: "h2", text: "5.2 Etapas" });
   let ol: { t: "ol"; items: ListItem[] } | null = null;
   String(p.selection || "").split(/\n/).map((s) => s.trim()).filter(Boolean).forEach((line) => {
     const m = line.match(/^\d+[.)]\s*(.*)$/);
@@ -94,12 +91,25 @@ export function docModel(p: Protocol): DocNode[] {
     if (m) { if (!ol) { ol = { t: "ol", items: [] }; M.push(ol); } ol.items.push({ runs: runsOf(m[1]) }); }
     else { ol = null; M.push({ t: "p", runs: runsOf(line) }); }
   });
-  const cb = (p.sqs || []).filter((s) => parseCodes(s.codes).length);
-  if (cb.length) {
-    M.push({ t: "h2", text: "5.1 Livro de códigos da extração" });
-    M.push({ t: "p", runs: [R("As categorias abaixo orientam a codificação de cada questão secundária. A ferramenta sugere categorias a partir de título, resumo e palavras-chave, e o revisor aceita, recusa ou acrescenta categorias.")] });
-    M.push({ t: "table", widths: [18, 82], head: ["Questão", "Categorias (termos indicadores)"], rows: cb.map((s) => [[[R(s.id || "SQ", { b: true })], ...(s.label ? [[R(s.label)]] : [])], parseCodes(s.codes).map((c) => [R(c.cat + ": ", { b: true }), R(c.terms.join("; "))])]) });
-  }
+  M.push({ t: "h2", text: "5.3 Avaliação de qualidade dos estudos" });
+  const qa = (p.qa || []).filter((c) => (c.t || "").trim());
+  if (qa.length) {
+    M.push({ t: "p", runs: [R("Cada estudo incluído é avaliado pelos critérios abaixo, com resposta Sim (1), Parcialmente (0,5) ou Não (0). A soma compõe a pontuação de qualidade do estudo.")] });
+    M.push({ t: "ul", items: qa.map((c) => ({ runs: [R("(" + c.c + "): ", { b: true }), R(c.t)] })) });
+  } else M.push({ t: "p", runs: [R("Critérios de avaliação de qualidade ainda não definidos.", { i: true })] });
+
+  M.push({ t: "h2", text: "5.4 Formulário de extração" });
+  const sqs = p.sqs || [];
+  if (sqs.length) {
+    M.push({ t: "p", runs: [R("O formulário tem um campo para cada questão de pesquisa secundária. Quando há categorias previstas (livro de códigos), a ferramenta as sugere a partir de título, resumo e palavras-chave, e o revisor aceita, recusa ou acrescenta categorias e registra o trecho que sustenta a codificação.")] });
+    M.push({ t: "table", widths: [14, 40, 46], head: ["Campo", "Questão respondida", "Categorias previstas (termos indicadores)"], rows: sqs.map((s, i) => {
+      const codes = parseCodes(s.codes);
+      return [[[R(s.id || "SQ" + (i + 1), { b: true })], ...(s.label ? [[R(s.label)]] : [])], [[R(s.en || s.pt || "")], ...(s.en && s.pt ? [[R("(" + s.pt + ")", { i: true })]] : [])], codes.length ? codes.map((c) => [R(c.cat + ": ", { b: true }), R(c.terms.join("; "))]) : [[R("Campo aberto", { i: true })]]];
+    }) });
+  } else M.push({ t: "p", runs: [R("Questões secundárias ainda não definidas; o formulário terá um campo para cada uma.", { i: true })] });
+
+  M.push({ t: "h2", text: "5.5 Fluxograma PRISMA 2020" });
+  M.push({ t: "p", runs: [R("O processo de seleção será relatado no fluxograma PRISMA 2020, com o número de registros em cada etapa: identificados por base, duplicados removidos, removidos por filtros automáticos, triados, excluídos na triagem, buscados e não recuperados, avaliados no texto completo, excluídos com o motivo (critério) e incluídos na revisão.")] });
   M.push({ t: "meta", text: "Versão de " + (p.updatedAt ? new Date(p.updatedAt) : new Date()).toLocaleDateString("pt-BR") + ", gerada pela Bancada PRISMA." });
   return M;
 }
@@ -199,6 +209,24 @@ export function buildDocx(D: typeof Docx, M: DocNode[]): Docx.Document {
     ] },
     sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } }, children }],
   });
+}
+
+/** O que um protocolo de revisão precisa definir; `hint` diz o que falta (ou onde o item é atendido). */
+export function protocolChecklist(p: Protocol): { label: string; ok: boolean; hint: string; target: string }[] {
+  const filled = (t?: unknown) => !!String(t ?? "").trim();
+  const crit = (l?: Criterion[]) => (l || []).filter((c) => filled(c.c) && filled(c.t)).length;
+  const sqs = p.sqs || [], asked = sqs.filter((s) => filled(s.en) || filled(s.pt)).length;
+  const two = String(p.reviewers) !== "1";
+  const item = (label: string, ok: boolean, missing: string, target: string, done = "") => ({ label, ok, hint: ok ? done : missing, target });
+  return [
+    item("Recorte temporal", filled(p.yearText), filled(p.yearFrom) || filled(p.yearTo) ? "Justifique o recorte: por que desde esse ano?" : "Defina o ano inicial, ou justifique não haver corte.", "sec-recorte"),
+    item("Idioma dos estudos", filled(p.langs), "Informe os idiomas aceitos.", "sec-idioma"),
+    item("Critérios de inclusão e exclusão numerados", crit(p.ic) > 0 && crit(p.ec) > 0, "Cadastre ao menos um IC e um EC, com código e descrição.", "sec-criterios"),
+    item("Critérios de avaliação de qualidade", crit(p.qa) > 0, "Cadastre as perguntas de qualidade (QA1, QA2…).", "sec-qualidade"),
+    item("Formulário de extração: um campo por questão", asked > 0 && asked === sqs.length, asked ? "Há questão secundária sem texto." : "Cadastre as questões secundárias; cada uma vira um campo da extração.", "sec-questoes"),
+    item("Quem faz a triagem e como se resolvem divergências", filled(p.team) && (!two || filled(p.conflicts)), filled(p.team) ? "Descreva como as divergências são resolvidas." : "Informe quem faz a triagem.", "sec-triagem"),
+    item("Fluxograma PRISMA 2020 com os números de cada etapa", true, "", "tab:prisma", "Abrir a aba Fluxograma PRISMA, gerado a partir das decisões."),
+  ];
 }
 
 export function slug(s: string, fallback = "protocolo"): string {

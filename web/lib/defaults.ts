@@ -17,7 +17,7 @@ export const DEFAULT_PROTOCOL: Protocol = {
   fields: { title: true, abstract: true, keywords: true },
   docTypes: { journal: true, conference: true },
   docTypesText: "Serão incluídos artigos de periódicos revisados por pares e trabalhos publicados em anais de conferências.",
-  yearFrom: "", yearTo: "", langs: "English",
+  yearFrom: "", yearTo: "", yearText: "", langs: "English", langsText: "",
   ic: [{ c: "IC1", t: "" }], ec: [{ c: "EC1", t: "" }],
   sources: [
     { id: "scopus", role: "main", how: "api", date: "", reported: "", custom: "" },
@@ -25,6 +25,9 @@ export const DEFAULT_PROTOCOL: Protocol = {
     { id: "acm_dl", role: "main", how: "manual", date: "", reported: "", custom: "" },
   ],
   compPurpose: "", selection: DEFAULT_SELECTION,
+  qa: [{ c: "QA1", t: "" }],
+  team: "",
+  conflicts: "As divergências são resolvidas por consenso entre os dois revisores; persistindo o desacordo, um terceiro revisor decide.",
   excludedTypes: DEFAULT_EXCLUDED_TYPES, suspectTitles: true, langFilter: true, shortPages: "0", reviewers: "2", blind: true, updatedAt: "",
 };
 
@@ -84,6 +87,7 @@ export function migrateProtocol(p: (Protocol & { question?: string; objectives?:
   o.blocks = Array.isArray(o.blocks) ? o.blocks : [];
   o.ic = Array.isArray(o.ic) ? o.ic : [];
   o.ec = Array.isArray(o.ec) ? o.ec : [];
+  o.qa = Array.isArray(o.qa) ? o.qa : [];
   o.sources = (o.sources ?? []).map((s) => ({ role: "main" as const, custom: "", ...s }));
   return o;
 }

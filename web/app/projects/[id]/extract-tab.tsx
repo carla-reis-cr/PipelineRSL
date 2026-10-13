@@ -14,6 +14,13 @@ const sqKey = (s: ResearchQuestion, i: number) => s.id || "SQ" + (i + 1);
 const sid = (i: number) => "S" + String(i + 1).padStart(2, "0");
 type ExStatus = "done" | "wip" | "todo";
 const exStatus = (e?: ExEntry): ExStatus => (e?.done ? "done" : e && Object.keys(e.data).length ? "wip" : "todo");
+/** As respostas de qualidade ficam junto da extração do estudo, na chave QA_KEY. */
+const QA_KEY = "_qa";
+type QaAnswer = "y" | "p" | "n";
+const QA_SCORE: Record<QaAnswer, number> = { y: 1, p: 0.5, n: 0 };
+const qaOf = (e?: ExEntry): Record<string, QaAnswer> => e?.data[QA_KEY]?.v ?? {};
+const qaScore = (e: ExEntry | undefined, codes: string[]) => { const v = qaOf(e); return codes.reduce((a, c) => a + (v[c] ? QA_SCORE[v[c]] : 0), 0); };
+const fmtScore = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 const EX_LABEL: Record<ExStatus, [string, string]> = { done: ["inc", "Concluída"], wip: ["may", "Em andamento"], todo: ["pend", "Não iniciada"] };
 
 export default function ExtractTab() {
@@ -44,6 +51,12 @@ function Form({ pool, sqs }: { pool: KeyedRecord[]; sqs: ResearchQuestion[] }) {
   const r = pool[i];
   const e = ex[r.key] ?? { data: {}, done: false };
   const doi = normDoi(r.doi);
+  const qa = (p.qa || []).filter((c) => c.c && (c.t || "").trim());
+  const answerQa = (code: string, val: QaAnswer) => saveEx(r.key, (x) => {
+    const cur = { ...qaOf(x) };
+    if (cur[code] === val) delete cur[code]; else cur[code] = val;
+    if (Object.keys(cur).length) x.data[QA_KEY] = { v: cur }; else delete x.data[QA_KEY];
+  });
   /** Altera a entrada de uma questão; entradas vazias não são gravadas. */
   const edit = (key: string, mut: (d: { a: string[]; x: string[]; n: string }) => void) => saveEx(r.key, (x) => {
     const d = { a: x.data[key]?.a ?? [], x: x.data[key]?.x ?? [], n: x.data[key]?.n ?? "" };
@@ -98,6 +111,16 @@ function Form({ pool, sqs }: { pool: KeyedRecord[]; sqs: ResearchQuestion[] }) {
               </section>
             );
           })}
+          {qa.length > 0 && (
+            <section className="exsec">
+              <header><span className="mono">QA</span><b>Avaliação de qualidade</b><span className="note mono">{fmtScore(qaScore(e, qa.map((c) => c.c)))} / {qa.length}</span></header>
+              {qa.map((c) => {
+                const v = qaOf(e)[c.c];
+                const btn = (val: QaAnswer, label: string) => <button className={"cbtn " + (val === "y" ? "good" : val === "n" ? "bad" : "unk")} aria-pressed={v === val} disabled={!canWrite} onClick={() => answerQa(c.c, val)}>{label}</button>;
+                return <div className="qa-row" key={c.c}><span className="ccode mono">{c.c}</span><span className="ctext">{c.t}</span><span className="cbtns" role="group" aria-label={c.c}>{btn("y", "Sim")}{btn("p", "Parcial")}{btn("n", "Não")}</span></div>;
+              })}
+            </section>
+          )}
           <div className="decide"><label className="check"><input type="checkbox" checked={e.done} disabled={!canWrite} onChange={(ev) => saveEx(r.key, (x) => { x.done = ev.target.checked; })} /><span>Extração deste estudo concluída</span></label>{e.by && <span className="note">Última edição: {nameOf(e.by)}</span>}</div>
           <div className="nav"><button className="btn ghost small" disabled={i === 0} onClick={() => setCur(pool[i - 1].key)}>← Anterior</button><button className="btn ghost small" disabled={i >= pool.length - 1} onClick={() => setCur(pool[i + 1].key)}>Próximo →</button></div>
         </article>
@@ -107,8 +130,9 @@ function Form({ pool, sqs }: { pool: KeyedRecord[]; sqs: ResearchQuestion[] }) {
 }
 
 function Matrix({ pool, sqs }: { pool: KeyedRecord[]; sqs: ResearchQuestion[] }) {
-  const { ex } = useB();
+  const { ex, protocol: p } = useB();
   const keys = sqs.map(sqKey);
+  const qa = (p.qa || []).filter((c) => c.c && (c.t || "").trim()).map((c) => c.c);
   const [cross, setCross] = useState<{ a: string; b: string } | null>(null);
   const rows = useMemo(() => pool.map((r, i) => ({ id: sid(i), r, done: !!ex[r.key]?.done, cats: Object.fromEntries(keys.map((k) => [k, ex[r.key]?.data[k]?.a ?? []])) as Record<string, string[]> })), [pool, ex, keys.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
   const freq = sqs.map((s, j) => {
@@ -121,7 +145,7 @@ function Matrix({ pool, sqs }: { pool: KeyedRecord[]; sqs: ResearchQuestion[] })
   const table = catsA.map((a) => catsB.map((b) => rows.filter((r) => r.cats[ca]?.includes(a) && r.cats[cb]?.includes(b)).length));
   const max = Math.max(1, ...table.flat());
 
-  const wide = () => downloadCSV("matriz_extracao.csv", [csvRow(["id", "title", "authors", "year", "venue", "doi", ...keys, "extracao_concluida"]), ...rows.map((r) => csvRow([r.id, r.r.title, r.r.authors, r.r.year, r.r.venue, r.r.doi, ...keys.map((k) => r.cats[k].join("; ")), r.done ? "sim" : "não"]))]);
+  const wide = () => downloadCSV("matriz_extracao.csv", [csvRow(["id", "title", "authors", "year", "venue", "doi", ...keys, ...qa, ...(qa.length ? ["qualidade_total"] : []), "extracao_concluida"]), ...rows.map((r) => csvRow([r.id, r.r.title, r.r.authors, r.r.year, r.r.venue, r.r.doi, ...keys.map((k) => r.cats[k].join("; ")), ...qa.map((c) => { const v = qaOf(ex[r.r.key])[c]; return v ? QA_SCORE[v] : ""; }), ...(qa.length ? [qaScore(ex[r.r.key], qa)] : []), r.done ? "sim" : "não"]))]);
   const long = () => downloadCSV("codificacao_extracao.csv", [csvRow(["id", "title", "questao", "rotulo", "categoria", "evidencia"]), ...rows.flatMap((r) => sqs.flatMap((s, j) => r.cats[keys[j]].map((c) => csvRow([r.id, r.r.title, keys[j], s.label, c, ex[r.r.key]?.data[keys[j]]?.n ?? ""]))))]);
 
   return (
@@ -129,10 +153,10 @@ function Matrix({ pool, sqs }: { pool: KeyedRecord[]; sqs: ResearchQuestion[] })
       <div className="panel">
         <header><h2>Matriz de extração</h2><p>Uma linha por estudo, uma coluna por questão secundária. É a base da taxonomia.</p></header>
         <div className="tbl"><table>
-          <thead><tr><th>ID</th><th>Estudo</th>{sqs.map((s, j) => <th key={keys[j]}>{keys[j]}{s.label ? " · " + s.label : ""}</th>)}</tr></thead>
+          <thead><tr><th>ID</th><th>Estudo</th>{sqs.map((s, j) => <th key={keys[j]}>{keys[j]}{s.label ? " · " + s.label : ""}</th>)}{qa.length > 0 && <th className="num">Qualidade</th>}</tr></thead>
           <tbody>{rows.map((r) => (
             <tr key={r.id}><td className="mono">{r.id}{!r.done && <> <span className="pill may">aberta</span></>}</td><td style={{ minWidth: 220 }}>{r.r.title} <span className="note">({r.r.year ?? ""})</span></td>
-              {keys.map((k) => <td key={k}>{r.cats[k].join("; ") || <span className="muted">—</span>}</td>)}</tr>
+              {keys.map((k) => <td key={k}>{r.cats[k].join("; ") || <span className="muted">—</span>}</td>)}{qa.length > 0 && <td className="num">{fmtScore(qaScore(ex[r.r.key], qa))} / {qa.length}</td>}</tr>
           ))}</tbody>
         </table></div>
         <div className="row"><button className="btn" onClick={wide}>Matriz (CSV)</button><button className="btn ghost" onClick={long}>Codificação detalhada (CSV)</button></div>

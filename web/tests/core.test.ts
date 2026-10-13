@@ -7,7 +7,7 @@ import { evalCriteria, suggestCodes, suggestDecision } from "../lib/criteria";
 import { migrateProtocol } from "../lib/defaults";
 import { computeFunnel } from "../lib/funnel";
 import { flowSVG } from "../lib/prisma-flow";
-import { docMD, docModel } from "../lib/protocol-doc";
+import { docMD, docModel, protocolChecklist } from "../lib/protocol-doc";
 import { deriveFunnel, deriveScreening, kappa, prismaCounts, statusOf, type VoteMap } from "../lib/screening";
 import { parseFile } from "../lib/parsers";
 import { buildStrings, scopusQuery } from "../lib/protocol";
@@ -201,10 +201,25 @@ describe("triagem, PRISMA e documento", () => {
     const md = docMD(docModel(protocol));
     expect(md).toContain("# Protocolo de Revisão da Literatura");
     expect(md).toContain("## 4. Critérios de Elegibilidade");
+    expect(md).toContain("**Estrutura da String:**");
+    expect(md).not.toMatch(/String por base|String de busca base/);
+    expect(md).not.toContain("TITLE-ABS-KEY"); // sintaxe de base específica fica fora do documento
     expect(buildStrings(protocol, true).at(-1)?.id).toBe("generic");
     const old = migrateProtocol({ question: "Q?", objectives: "O" } as never);
     expect(old.gq?.en).toBe("Q?");
     expect(old.objective).toBe("O");
     expect(old.blind).toBe(true);
+  });
+  it("confere os tópicos que o protocolo precisa cobrir", () => {
+    const missing = (p: Protocol) => protocolChecklist(p).filter((x) => !x.ok).map((x) => x.label);
+    expect(missing(migrateProtocol(null))).toEqual(["Recorte temporal", "Critérios de inclusão e exclusão numerados", "Critérios de avaliação de qualidade", "Formulário de extração: um campo por questão", "Quem faz a triagem e como se resolvem divergências"]);
+    const full = migrateProtocol({ ...protocol, yearFrom: "2023", yearText: "Popularização da IA generativa.", qa: [{ c: "QA1", t: "Os objetivos estão claros?" }], team: "Autora e orientador" });
+    expect(missing(full)).toEqual([]);
+    expect(protocolChecklist(full).map((x) => x.target)).toEqual(["sec-recorte", "sec-idioma", "sec-criterios", "sec-qualidade", "sec-questoes", "sec-triagem", "tab:prisma"]);
+    const md = docMD(docModel(full));
+    expect(md).toContain("**Recorte temporal:** de 2023 até a data da busca. Popularização da IA generativa.");
+    expect(md).toContain("**(QA1):** Os objetivos estão claros?");
+    expect(md).toContain("### 5.4 Formulário de extração");
+    expect(md).toContain("**Divergências:**");
   });
 });

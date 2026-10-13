@@ -8,7 +8,8 @@ import type { KeyedRecord, Protocol } from "@/lib/types";
 
 export interface Member { user_id: string; email: string; role: "owner" | "reviewer" | "viewer"; slot: number | null }
 export interface ImportRow { id: string; source: string; method: string; file_name: string | null; query: string | null; total_reported: number | null; record_count: number; status: string; error: string | null; created_at: string }
-export interface SqData { a?: string[]; x?: string[]; n?: string }
+/** Por questão: categorias aceitas (a), recusadas (x) e evidência (n). Na chave "_qa": respostas de qualidade (v). */
+export interface SqData { a?: string[]; x?: string[]; n?: string; v?: Record<string, "y" | "p" | "n"> }
 /** Extração de um estudo: uma entrada por questão secundária. */
 export interface ExEntry { data: Record<string, SqData>; done: boolean; by?: string }
 

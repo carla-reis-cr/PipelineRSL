@@ -72,7 +72,7 @@ function Shell({ apiIds }: { apiIds: string[] }) {
         ))}
       </nav>
 
-      {tab === "protocolo" && <ProtocolTab />}
+      {tab === "protocolo" && <ProtocolTab goTab={show} />}
       {tab === "importar" && <ImportTab apiIds={apiIds} />}
       {tab === "ta" && <ScreenTab key="ta" stage="ta" />}
       {tab === "ft" && <ScreenTab key="ft" stage="ft" />}

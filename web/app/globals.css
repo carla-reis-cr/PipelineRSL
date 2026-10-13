@@ -293,3 +293,21 @@ td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabula
 .tr{display:flex;flex-direction:column;gap:8px}
 .tr-out{border-left:3px solid var(--line-strong);padding:2px 0 2px 14px;display:flex;flex-direction:column;gap:6px}
 .tr-t{font-family:var(--f-display);font-weight:600;font-size:1.1rem;line-height:1.3}
+
+/* lista de verificação do protocolo e avaliação de qualidade */
+.chk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.chk li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;font-size:.86rem;align-items:start}
+.chk li > div{display:flex;flex-direction:column}
+.chk li b{font-weight:500}
+.chk li.ok > span{color:var(--ok)}.chk li.todo > span{color:var(--warn)}
+.qa-row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.qa-row:first-of-type{border-top:0}
+
+/* itens do checklist levam à seção do formulário */
+.chk li > .chk-go{background:none;border:0;padding:0;text-align:left;display:flex;flex-direction:column;color:inherit;font:inherit;cursor:pointer;border-radius:3px}
+.chk li > .chk-go:hover b{text-decoration:underline}
+.chk li > .chk-go .note{text-align:left}
+#sec-questoes,#sec-criterios,#sec-triagem,#sec-qualidade,#sec-idioma,#sec-recorte{scroll-margin-top:16px}
+@keyframes flash{from{box-shadow:0 0 0 3px var(--accent)}to{box-shadow:0 0 0 3px transparent}}
+.flash{animation:flash 1.4s ease-out}
+@media (prefers-reduced-motion:reduce){.flash{animation:none;box-shadow:0 0 0 3px var(--accent)}}
