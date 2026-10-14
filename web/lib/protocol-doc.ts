@@ -110,7 +110,7 @@ export function docModel(p: Protocol): DocNode[] {
 
   M.push({ t: "h2", text: "5.5 Fluxograma PRISMA 2020" });
   M.push({ t: "p", runs: [R("O processo de seleção será relatado no fluxograma PRISMA 2020, com o número de registros em cada etapa: identificados por base, duplicados removidos, removidos por filtros automáticos, triados, excluídos na triagem, buscados e não recuperados, avaliados no texto completo, excluídos com o motivo (critério) e incluídos na revisão.")] });
-  M.push({ t: "meta", text: "Versão de " + (p.updatedAt ? new Date(p.updatedAt) : new Date()).toLocaleDateString("pt-BR") + ", gerada pela Bancada PRISMA." });
+  M.push({ t: "meta", text: "Versão de " + (p.updatedAt ? new Date(p.updatedAt) : new Date()).toLocaleDateString("pt-BR") + ", gerada pelo Pipeline RSL." });
   return M;
 }
 
@@ -201,7 +201,7 @@ export function buildDocx(D: typeof Docx, M: DocNode[]): Docx.Document {
   }
   const bullet = (level: number, text: string) => ({ level, format: D.LevelFormat.BULLET, text, alignment: D.AlignmentType.LEFT, style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } } });
   return new D.Document({
-    creator: "Bancada PRISMA", title: "Protocolo de Revisão da Literatura",
+    creator: "Pipeline RSL", title: "Protocolo de Revisão da Literatura",
     styles: { default: { document: { run: { font: FONT, size: 22 } } } },
     numbering: { config: [
       { reference: "bullets", levels: [bullet(0, "●"), bullet(1, "○"), bullet(2, "■")] },

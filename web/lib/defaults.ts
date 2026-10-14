@@ -2,7 +2,7 @@
 import { DEFAULT_EXCLUDED_TYPES } from "./funnel";
 import type { Protocol } from "./types";
 
-export const DEFAULT_SELECTION = `1. Triagem: os registros vindos das bases (por API ou arquivo exportado) entram na Bancada PRISMA, que remove duplicatas e registros inelegíveis por tipo, ano e idioma. Dois revisores leem títulos e resumos de forma independente; sugestões de IA, quando usadas, só são exibidas depois da decisão de cada revisor.
+export const DEFAULT_SELECTION = `1. Triagem: os registros vindos das bases (por API ou arquivo exportado) entram no Pipeline RSL, que remove duplicatas e registros inelegíveis por tipo, ano e idioma. Dois revisores leem títulos e resumos de forma independente; sugestões de IA, quando usadas, só são exibidas depois da decisão de cada revisor.
 2. Leitura do texto completo: os estudos aprovados são lidos na íntegra pelos dois revisores, e cada exclusão é registrada com o critério correspondente.
 3. Avaliação de qualidade: os estudos incluídos são avaliados com um checklist de qualidade definido pela equipe.
 4. Extração de dados: os dados são extraídos em formulário próprio, com uma coluna para cada questão secundária.`;

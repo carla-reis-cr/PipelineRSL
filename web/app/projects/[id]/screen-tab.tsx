@@ -358,7 +358,7 @@ function AiPanel() {
       n += d.saved ?? 0;
       model = d.model || model;
     }
-    if (n) await addLog({ stage: "Triagem de títulos e resumos", tool: `Claude (${model}), via Bancada PRISMA`, what: `Sugeriu incluir, talvez ou excluir para ${n} registros, com base no título, no resumo e nos critérios do protocolo.`, check: "Sugestão exibida ao revisor só depois da decisão dele; todas as decisões foram tomadas por revisores humanos.", auto: true });
+    if (n) await addLog({ stage: "Triagem de títulos e resumos", tool: `Claude (${model}), via Pipeline RSL`, what: `Sugeriu incluir, talvez ou excluir para ${n} registros, com base no título, no resumo e nos critérios do protocolo.`, check: "Sugestão exibida ao revisor só depois da decisão dele; todas as decisões foram tomadas por revisores humanos.", auto: true });
     await reloadAi();
     setRun(null);
     toast((stop.current ? "Interrompido. " : "") + `${fmtN(n)} sugestões registradas.` + (last ? " " + last : ""));

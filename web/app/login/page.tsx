@@ -47,7 +47,7 @@ export default function Login() {
 
   return (
     <main style={{ maxWidth: 420 }}>
-      <h1>Bancada PRISMA</h1>
+      <h1>Pipeline RSL</h1>
       <form className="panel" onSubmit={send}>
         <label>E-mail<br /><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: "100%" }} /></label>
         <button className="btn" type="submit" disabled={sending || wait > 0}>

@@ -378,7 +378,7 @@ function useExports() {
   const name = (ext: string) => `protocolo_${slug(p.title || "").slice(0, 60)}_${today()}.${ext}`;
   return {
     md: () => download(name("md"), docMD(docModel(p)), "text/markdown"),
-    json: () => download("protocolo.json", JSON.stringify({ ...p, _gerado: "Bancada PRISMA, " + new Date().toISOString() }, null, 2), "application/json"),
+    json: () => download("protocolo.json", JSON.stringify({ ...p, _gerado: "Pipeline RSL, " + new Date().toISOString() }, null, 2), "application/json"),
     copy: () => copyText(docText(docModel(p)), toast),
     docx: async () => {
       try { const D = await import("docx"); download(name("docx"), await D.Packer.toBlob(buildDocx(D, docModel(p)))); }
