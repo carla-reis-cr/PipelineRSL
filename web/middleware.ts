@@ -3,6 +3,14 @@ import { type NextRequest, NextResponse } from "next/server";
 
 /** Renova a sessão do Supabase a cada requisição e manda para /login quem não entrou. */
 export async function middleware(req: NextRequest) {
+  // Se o Supabase devolver o código para outra página (ex.: /login?code=...), encaminha para o callback.
+  const code = req.nextUrl.searchParams.get("code");
+  if (code && !req.nextUrl.pathname.startsWith("/auth")) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    url.search = `?code=${encodeURIComponent(code)}`;
+    return NextResponse.redirect(url);
+  }
   let res = NextResponse.next({ request: req });
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     cookies: {

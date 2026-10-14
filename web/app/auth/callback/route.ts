@@ -6,7 +6,12 @@ export async function GET(req: Request) {
   const code = url.searchParams.get("code");
   if (code) {
     const sb = await supabaseServer();
-    await sb.auth.exchangeCodeForSession(code);
+    const { error } = await sb.auth.exchangeCodeForSession(code);
+    if (error) {
+      const to = new URL("/login", url.origin);
+      to.searchParams.set("erro", error.message);
+      return NextResponse.redirect(to);
+    }
   }
   return NextResponse.redirect(new URL("/", url.origin));
 }
