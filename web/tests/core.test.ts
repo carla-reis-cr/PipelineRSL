@@ -4,10 +4,11 @@ import { describe, expect, it } from "vitest";
 import { ieee } from "../lib/connectors/ieee";
 import { scopus } from "../lib/connectors/scopus";
 import { evalCriteria, suggestCodes, suggestDecision } from "../lib/criteria";
-import { migrateProtocol } from "../lib/defaults";
+import { EXAMPLE_PROTOCOL, migrateProtocol } from "../lib/defaults";
 import { computeFunnel } from "../lib/funnel";
 import { flowSVG } from "../lib/prisma-flow";
 import { docMD, docModel, protocolChecklist } from "../lib/protocol-doc";
+import { pdfDefinition, pdfText } from "../lib/protocol-pdf";
 import { deriveFunnel, deriveScreening, kappa, prismaCounts, statusOf, type VoteMap } from "../lib/screening";
 import { parseFile } from "../lib/parsers";
 import { buildStrings, scopusQuery } from "../lib/protocol";
@@ -200,7 +201,7 @@ describe("triagem, PRISMA e documento", () => {
   it("monta o documento do protocolo e completa protocolos antigos", () => {
     const md = docMD(docModel(protocol));
     expect(md).toContain("# Protocolo de Revisão da Literatura");
-    expect(md).toContain("## 4. Critérios de Elegibilidade");
+    expect(md).toContain("## 5. Critérios de Elegibilidade");
     expect(md).toContain("**Estrutura da String:**");
     expect(md).not.toMatch(/String por base|String de busca base/);
     expect(md).not.toContain("TITLE-ABS-KEY"); // sintaxe de base específica fica fora do documento
@@ -221,5 +222,23 @@ describe("triagem, PRISMA e documento", () => {
     expect(md).toContain("**(QA1):** Os objetivos estão claros?");
     expect(md).toContain("### 5.4 Formulário de extração");
     expect(md).toContain("**Divergências:**");
+  });
+});
+
+describe("PDF do protocolo", () => {
+  it("gera um PDF válido a partir do modelo do documento", async () => {
+    const { createRequire } = await import("node:module");
+    const req = createRequire(import.meta.url);
+    const pdfMake = req("pdfmake/build/pdfmake");
+    pdfMake.vfs = req("pdfmake/build/vfs_fonts");
+    const def = pdfDefinition(docModel(migrateProtocol(structuredClone(EXAMPLE_PROTOCOL))), "Teste");
+    const buf: Uint8Array = await new Promise((ok) => pdfMake.createPdf(def).getBuffer(ok));
+    expect(Buffer.from(buf.slice(0, 5)).toString()).toBe("%PDF-");
+    expect(buf.length).toBeGreaterThan(5000);
+  });
+
+  it("troca por equivalentes os caracteres que a fonte do PDF não tem", () => {
+    expect(pdfText("Competência → Evidências ← Fonte ✓ ☐ 😀")).toBe("Competência -> Evidências <- Fonte [x] [ ] ");
+    expect(pdfText("≥ 2020 – “ok” ● ○ ■ …")).toBe("≥ 2020 – “ok” ● ○ ■ …");
   });
 });

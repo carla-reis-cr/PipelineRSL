@@ -34,7 +34,8 @@ export interface KeyedRecord extends BibRecord {
   key: string;
 }
 
-export type Field = "title" | "abstract" | "keywords";
+export type Field = "title" | "abstract" | "keywords" | "authors" | "venue";
+export type DocType = "journal" | "conference" | "review" | "book_chapter" | "book";
 
 export interface Criterion {
   c: string;            // código: IC1, EC2…
@@ -76,7 +77,7 @@ export interface Protocol {
   searchIntro?: string;
   blocks?: SearchBlock[];
   fields?: Partial<Record<Field, boolean>>;
-  docTypes?: { journal?: boolean; conference?: boolean };
+  docTypes?: Partial<Record<DocType, boolean>>;
   docTypesText?: string;
   yearFrom?: string | number;
   yearTo?: string | number;

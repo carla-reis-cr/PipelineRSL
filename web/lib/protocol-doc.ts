@@ -4,7 +4,7 @@
  */
 import type * as Docx from "docx";
 import { FIELD_NAMES, parseCodes, ruleFields } from "./criteria";
-import { fieldList, fieldsLabel, intOr, quote, termsOf } from "./protocol";
+import { FIELD_EN, fieldList, fieldsLabel, intOr, quote, termsOf } from "./protocol";
 import { SOURCE_LABELS, type Criterion, type Protocol } from "./types";
 
 export interface Run { text: string; b?: boolean; i?: boolean }
@@ -26,16 +26,18 @@ export function docModel(p: Protocol): DocNode[] {
   M.push({ t: "title", text: "Protocolo de Revisão da Literatura" });
   M.push({ t: "p", runs: [R("Título: ", { b: true }), R(p.title || "(sem título)", { i: true })] });
 
-  M.push({ t: "h", text: "1. Objetivos e Questões de Pesquisa (Research Questions)" });
+  M.push({ t: "h", text: "1. Objetivos" });
   paras(p.objective).forEach((x) => M.push({ t: "p", runs: [R(x)] }));
   if ((p.logic || "").trim()) { M.push({ t: "p", runs: [R("A ideia é seguir a lógica:")] }); M.push({ t: "p", runs: [R(p.logic!.trim(), { b: true })] }); }
+
+  M.push({ t: "h", text: "2. Questões de Pesquisa (Research Questions)" });
   if ((p.rqIntro || "").trim()) M.push({ t: "p", runs: [R(p.rqIntro!.trim())] });
   const qcell = (label?: string, en?: string, pt?: string) => [label ? [R(label, { b: true })] : null, en ? [R(en)] : null, pt ? [R("(" + pt + ")", { i: true })] : null].filter(Boolean) as Run[][];
   const rows: Run[][][][] = [[[[R("GQ", { b: true })]], qcell(p.gq?.label || "General Question", p.gq?.en, p.gq?.pt)]];
   (p.sqs || []).forEach((s, i) => rows.push([[[R(s.id || "SQ" + (i + 1), { b: true })]], qcell(s.label, s.en, s.pt)]));
   M.push({ t: "table", widths: [14, 86], head: ["ID", "Questão de Pesquisa (Research Question)"], rows });
 
-  M.push({ t: "h", text: "2. Estratégia de Busca (Search String)" });
+  M.push({ t: "h", text: "3. Estratégia de Busca (Search String)" });
   paras(p.searchIntro).forEach((x) => M.push({ t: "p", runs: [R(x)] }));
   const B = (p.blocks || []).filter((b) => termsOf(b).length);
   if (B.length) {
@@ -44,10 +46,10 @@ export function docModel(p: Protocol): DocNode[] {
     // as strings na sintaxe de cada base ficam na aba Protocolo, não no documento
   }
 
-  M.push({ t: "h", text: "3. Fontes de Informação e Parâmetros (Information Sources)" });
+  M.push({ t: "h", text: "4. Fontes de Informação e Parâmetros (Information Sources)" });
   const src = p.sources || [];
   const main = src.filter((s) => s.role !== "comp").map((s) => srcName(s.id)), comp = src.filter((s) => s.role === "comp").map((s) => srcName(s.id));
-  const fsEn = { title: "Title", abstract: "Abstract", keywords: "Keywords" };
+  const fsEn = FIELD_EN;
   const fl = fieldList(p);
   const items: ListItem[] = [];
   if (main.length) items.push({ runs: [R("Bases de Dados Selecionadas: ", { b: true }), R(joinPt(main) + ".")] });
@@ -62,7 +64,7 @@ export function docModel(p: Protocol): DocNode[] {
   if (dated.length) items.push({ runs: [R("Execução da busca: ", { b: true }), R(dated.map((s) => srcName(s.id) + (s.date ? " em " + new Date(s.date + "T12:00").toLocaleDateString("pt-BR") : "") + (s.reported ? " (" + fmtN(intOr(s.reported)) + " registros)" : "")).join("; ") + ".")] });
   M.push({ t: "ul", items });
 
-  M.push({ t: "h", text: "4. Critérios de Elegibilidade (Eligibility Criteria)" });
+  M.push({ t: "h", text: "5. Critérios de Elegibilidade (Eligibility Criteria)" });
   const ruleDesc = (c: Criterion) => {
     const r = c.rule;
     if (!r || !r.type || r.type === "none") return "";
@@ -78,7 +80,7 @@ export function docModel(p: Protocol): DocNode[] {
   const crit = (list?: Criterion[]): ListItem[] => (list || []).filter((c) => c.c || c.t).map((c) => ({ runs: [R("(" + c.c + "): ", { b: true }), R(c.t), R(ruleDesc(c), { i: true })] }));
   M.push({ t: "ul", items: [{ runs: [R("Critérios de Inclusão (IC):", { b: true })], children: crit(p.ic) }, { runs: [R("Critérios de Exclusão (EC):", { b: true })], children: crit(p.ec) }] });
 
-  M.push({ t: "h", text: "5. Seleção, Qualidade e Extração de Dados" });
+  M.push({ t: "h", text: "6. Seleção, Qualidade e Extração de Dados" });
   const two = String(p.reviewers) !== "1";
   M.push({ t: "h2", text: "5.1 Triagem e resolução de divergências" });
   M.push({ t: "p", runs: [R("Quem faz a triagem: ", { b: true }), R(((p.team || "").trim() ? p.team!.trim().replace(/\.?$/, ". ") : "") + (two ? `Dois revisores avaliam cada registro de forma independente${p.blind !== false ? ", sem ver a decisão um do outro (triagem cega)" : ""}, nas etapas de título/resumo e de texto completo.` : "Um revisor avalia cada registro, nas etapas de título/resumo e de texto completo."))] });
@@ -110,7 +112,6 @@ export function docModel(p: Protocol): DocNode[] {
 
   M.push({ t: "h2", text: "5.5 Fluxograma PRISMA 2020" });
   M.push({ t: "p", runs: [R("O processo de seleção será relatado no fluxograma PRISMA 2020, com o número de registros em cada etapa: identificados por base, duplicados removidos, removidos por filtros automáticos, triados, excluídos na triagem, buscados e não recuperados, avaliados no texto completo, excluídos com o motivo (critério) e incluídos na revisão.")] });
-  M.push({ t: "meta", text: "Versão de " + (p.updatedAt ? new Date(p.updatedAt) : new Date()).toLocaleDateString("pt-BR") + ", gerada pelo Pipeline RSL." });
   return M;
 }
 
@@ -188,11 +189,14 @@ export function buildDocx(D: typeof Docx, M: DocNode[]): Docx.Document {
     else if (n.t === "table") {
       const total = 9026;
       const w = n.widths.map((x) => Math.round((total * x) / 100));
-      const cell = (content: Docx.Paragraph[], i: number) => new D.TableCell({ borders, width: { size: w[i], type: D.WidthType.DXA }, margins: { top: 80, bottom: 80, left: 110, right: 110 }, children: content });
+      // sem as linhas das bordas esquerda e direita da tabela; as divisórias entre colunas ficam
+      const none = { style: D.BorderStyle.NONE, size: 0, color: "FFFFFF" };
+      const thick = { style: D.BorderStyle.SINGLE, size: 16, color: "000000" };
+      const cell = (content: Docx.Paragraph[], i: number, head = false) => new D.TableCell({ borders: { ...borders, ...(head ? { top: thick } : {}), ...(i === 0 ? { left: none } : {}), ...(i === w.length - 1 ? { right: none } : {}) }, width: { size: w[i], type: D.WidthType.DXA }, margins: { top: 80, bottom: 80, left: 110, right: 110 }, children: content });
       children.push(new D.Table({
         width: { size: total, type: D.WidthType.DXA }, columnWidths: w,
         rows: [
-          new D.TableRow({ tableHeader: true, children: n.head.map((h, i) => cell([new D.Paragraph({ children: [new D.TextRun({ text: h, bold: true, font: FONT, size: 22 })] })], i)) }),
+          new D.TableRow({ tableHeader: true, children: n.head.map((h, i) => cell([new D.Paragraph({ children: [new D.TextRun({ text: h, bold: true, font: FONT, size: 22 })] })], i, true)) }),
           ...n.rows.map((r) => new D.TableRow({ cantSplit: true, children: r.map((c, i) => cell(c.map((pp) => new D.Paragraph({ children: pp.map(tr), spacing: { after: 40 } })), i)) })),
         ],
       }));

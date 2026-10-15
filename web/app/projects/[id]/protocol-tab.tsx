@@ -3,10 +3,10 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { FIELD_NAMES, parseCodes, RULE_LABELS } from "@/lib/criteria";
 import { EXAMPLE_PROTOCOL, migrateProtocol } from "@/lib/defaults";
 import { download } from "@/lib/download";
-import { buildStrings, termsOf } from "@/lib/protocol";
+import { ALL_FIELDS, buildStrings, CORE_FIELDS, DOC_TYPES, FIELD_PT, splitAnd, termsOf } from "@/lib/protocol";
 import { buildDocx, docMD, docModel, docText, protocolChecklist, slug, type DocNode, type ListItem, type Run } from "@/lib/protocol-doc";
 import { critKind } from "@/lib/screening";
-import { SOURCE_LABELS, type Criterion, type Field, type Protocol } from "@/lib/types";
+import { SOURCE_LABELS, type Criterion, type DocType, type Field, type Protocol } from "@/lib/types";
 import { getPath, setPath, useB } from "./store";
 
 const BLOCK_COLORS = ["var(--hl1)", "var(--hl2)", "var(--hl3)", "var(--hl4)"];
@@ -78,7 +78,7 @@ export default function ProtocolTab({ goTab }: { goTab: (tab: "prisma") => void 
             </nav>
             <ProtocolForm section={section} />
           </div>
-          <aside className="stack sticky side"><Checklist onGo={onGo} /><Exports /></aside>
+          <aside className="stack sticky side"><Checklist onGo={onGo} />{section === "busca" && <div className="panel"><Strings /></div>}<Exports /></aside>
         </div>
       ) : <DocView />}
     </section>
@@ -102,6 +102,42 @@ function Add({ list, children }: { list: ListKey; children: ReactNode }) {
 function Rm({ list, i, label, x }: { list: ListKey; i: number; label: string; x?: boolean }) {
   const { updateProtocol, canWrite } = useB();
   return <button className="btn danger small" style={x ? undefined : { alignSelf: "flex-end" }} aria-label={label} disabled={!canWrite} onClick={() => updateProtocol((d) => { (d[list] as unknown[]).splice(i, 1); })}>{x ? "×" : "Remover"}</button>;
+}
+
+/** Termos como etiquetas: Enter, vírgula ou ponto e vírgula adicionam; × (ou Backspace no campo vazio) remove. Guarda um termo por linha. */
+function TagInput({ value, onChange, disabled, placeholder }: { value: string; onChange: (v: string) => void; disabled?: boolean; placeholder?: string }) {
+  const [draft, setDraft] = useState("");
+  const tags = value.split("\n").map((s) => s.trim()).filter(Boolean);
+  const save = (list: string[]) => onChange(list.join("\n"));
+  const commit = (raw: string) => {
+    const add = raw.split(/[\n;,]/).map((s) => s.replace(/\s+AND\s*$/, "")).map((s) => s.trim().replace(/^"+|"+$/g, "").trim()).filter(Boolean);
+    const seen = new Set(tags.map((t) => t.toLowerCase()));
+    const fresh = add.filter((t) => !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+    if (fresh.length) save([...tags, ...fresh]);
+    setDraft("");
+  };
+  return (
+    <div className="taginput">
+      {tags.map((t, i) => (
+        <span key={t + i} className="chip ok">{splitAnd(t).map((part, k) => <span key={k}>{k > 0 && <b className="op"> AND </b>}{part}</span>)}{!disabled && <button type="button" aria-label={"Remover " + t} onClick={() => save(tags.filter((_, j) => j !== i))}>×</button>}</span>
+      ))}
+      {!disabled && (
+        <input
+          type="text" value={draft} placeholder={tags.length ? "" : placeholder}
+          onChange={(e) => { const v = e.target.value; /[;,]/.test(v) ? commit(v) : setDraft(v); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); commit(draft); }
+            else if (e.key === "Backspace" && !draft && tags.length) save(tags.slice(0, -1));
+          }}
+          onPaste={(e) => { const t = e.clipboardData.getData("text"); if (/[\n;,]/.test(t)) { e.preventDefault(); commit(draft + t); } }}
+          onBlur={() => draft.trim() && commit(draft)}
+        />
+      )}
+      {!disabled && draft.trim() && !/\sAND\s*$/.test(draft) && (
+        <button type="button" className="btn ghost small" title="Palavras que precisam aparecer no mesmo texto, em qualquer posição" onMouseDown={(e) => e.preventDefault()} onClick={() => setDraft(draft.trimEnd() + " AND ")}>+ AND</button>
+      )}
+    </div>
+  );
 }
 
 function ProtocolForm({ section }: { section: Section }) {
@@ -157,50 +193,6 @@ function ProtocolForm({ section }: { section: Section }) {
       {section === "busca" && (
         <>
       <div className="panel">
-        <header><h2>Estratégia de busca</h2><p>Cada bloco é um termo principal com seus termos alternativos (OR). Os blocos se combinam com AND. Use * para truncar, como em <span className="mono">competenc*</span>.</p></header>
-        <label className="f">Texto de apresentação da string<textarea rows={2} {...text("searchIntro")} /></label>
-        <div className="blocks">
-          {(p.blocks || []).map((b, i) => {
-            const n = termsOf(b).length;
-            return (
-              <div key={i} className="blocks">
-                {i > 0 && <div className="and">AND</div>}
-                <div className="block">
-                  <div className="sw" style={{ background: BLOCK_COLORS[i % 4] }}>{i + 1}</div>
-                  <div className="body">
-                    <div className="row" style={{ flexWrap: "nowrap" }}><label className="f" style={{ flex: 1 }}>Termo principal (major term)<input type="text" {...text(`blocks.${i}.name`)} placeholder="Ex.: Entrepreneurial Education" /></label><Rm list="blocks" i={i} label="Remover bloco" /></div>
-                    <label className="f">Termos alternativos, um por linha<textarea rows={5} {...text(`blocks.${i}.terms`)} placeholder={"entrepreneurial competenc*\nentrepreneurship education"} /></label>
-                    <span className="note">{n} termo{n === 1 ? "" : "s"} combinados com OR</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <Add list="blocks">Adicionar bloco</Add>
-        <div className="grid2">
-          <fieldset className="fs"><legend>Campos de busca</legend>
-            <label className="check"><input {...check("fields.title")} /><span>Título</span></label>
-            <label className="check"><input {...check("fields.abstract")} /><span>Resumo</span></label>
-            <label className="check"><input {...check("fields.keywords")} /><span>Palavras-chave</span></label>
-          </fieldset>
-          <fieldset className="fs"><legend>Tipos de documento</legend>
-            <label className="check"><input {...check("docTypes.journal")} /><span>Artigos de periódico</span></label>
-            <label className="check"><input {...check("docTypes.conference")} /><span>Artigos de conferência</span></label>
-          </fieldset>
-        </div>
-        <label className="f">Justificativa dos tipos de documento<textarea rows={2} {...text("docTypesText")} /></label>
-        <div className="grid2">
-          <label className="f">Ano inicial (vazio = sem limite)<input type="number" {...text("yearFrom")} placeholder="Ex.: 2016" /></label>
-          <label className="f">Ano final (vazio = até a data da busca)<input type="number" {...text("yearTo")} /></label>
-          <label className="f" id="sec-idioma">Idiomas aceitos<input type="text" {...text("langs")} placeholder="English" /></label>
-        </div>
-        <label className="f" id="sec-recorte">Justificativa do recorte temporal<textarea rows={2} {...text("yearText")} placeholder="Ex.: a partir de 2023, quando a IA generativa passou a ser usada em larga escala no ensino; ou sem corte, para mapear toda a produção" /></label>
-        <label className="f">Justificativa do idioma (opcional)<textarea rows={2} {...text("langsText")} placeholder="Ex.: inglês é o idioma predominante das publicações indexadas nas bases escolhidas" /></label>
-        <Strings />
-      </div>
-
-      <div className="panel">
         <header><h2>Fontes de informação</h2><p>Bases principais entram na busca; complementares servem, por exemplo, para medir sobreposição. Scopus e IEEE Xplore podem ser buscadas por API na aba Busca e importação.</p></header>
         <div className="src src-head"><span>Base</span><span>Papel</span><span>Acesso</span><span>Data da busca</span><span>Total</span><span></span></div>
         {(p.sources || []).map((s, i) => (
@@ -215,6 +207,46 @@ function ProtocolForm({ section }: { section: Section }) {
         ))}
         <Add list="sources">Adicionar base</Add>
         <label className="f">Finalidade das bases complementares<input type="text" {...text("compPurpose")} placeholder="Ex.: para avaliar o índice de sobreposição" /></label>
+      </div>
+
+      <div className="panel">
+        <header><h2>Estratégia de busca</h2><p>Cada bloco é um termo principal com seus termos alternativos (OR). Os blocos se combinam com AND. Use * para truncar, como em <span className="mono">competenc*</span>.</p></header>
+        <label className="f">Texto de apresentação da string<textarea rows={2} {...text("searchIntro")} /></label>
+        <div className="blocks">
+          {(p.blocks || []).map((b, i) => {
+            const n = termsOf(b).length;
+            return (
+              <div key={i} className="blocks">
+                {i > 0 && <div className="and">AND</div>}
+                <div className="block">
+                  <div className="sw" style={{ background: BLOCK_COLORS[i % 4] }}>{i + 1}</div>
+                  <div className="body">
+                    <div className="row" style={{ flexWrap: "nowrap" }}><label className="f" style={{ flex: 1 }}>Termo principal (major term)<input type="text" {...text(`blocks.${i}.name`)} placeholder="Ex.: Entrepreneurial Education" /></label><Rm list="blocks" i={i} label="Remover bloco" /></div>
+                    <div className="f">Termos alternativos (Enter adiciona; duas palavras juntas formam uma frase; “+ AND” liga palavras separadas)<TagInput value={String(getPath(p, `blocks.${i}.terms`) ?? "")} disabled={!canWrite} onChange={(v) => updateProtocol((d) => setPath(d, `blocks.${i}.terms`, v))} placeholder="Ex.: entrepreneurial competenc*" /></div>
+                    <span className="note">{n} termo{n === 1 ? "" : "s"} combinados com OR; dentro de uma tag, AND exige todas as palavras</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <Add list="blocks">Adicionar bloco</Add>
+        <div className="grid2">
+          <fieldset className="fs"><legend>Campos de busca</legend>
+            {ALL_FIELDS.map((f) => <label className="check" key={f}><input {...check(`fields.${f}`)} /><span>{FIELD_PT[f]}</span></label>)}
+          </fieldset>
+          <fieldset className="fs"><legend>Tipos de documento</legend>
+            {(Object.keys(DOC_TYPES) as DocType[]).map((d) => <label className="check" key={d}><input {...check(`docTypes.${d}`)} /><span>{DOC_TYPES[d].label}</span></label>)}
+          </fieldset>
+        </div>
+        <label className="f">Justificativa dos tipos de documento<textarea rows={2} {...text("docTypesText")} /></label>
+        <div className="grid2">
+          <label className="f">Ano inicial (vazio = sem limite)<input type="number" {...text("yearFrom")} placeholder="Ex.: 2016" /></label>
+          <label className="f">Ano final (vazio = até a data da busca)<input type="number" {...text("yearTo")} /></label>
+          <label className="f" id="sec-idioma">Idiomas aceitos<input type="text" {...text("langs")} placeholder="English" /></label>
+        </div>
+        <label className="f" id="sec-recorte">Justificativa do recorte temporal<textarea rows={2} {...text("yearText")} placeholder="Ex.: a partir de 2023, quando a IA generativa passou a ser usada em larga escala no ensino; ou sem corte, para mapear toda a produção" /></label>
+        <label className="f">Justificativa do idioma (opcional)<textarea rows={2} {...text("langsText")} placeholder="Ex.: inglês é o idioma predominante das publicações indexadas nas bases escolhidas" /></label>
       </div>
 
         </>
@@ -293,9 +325,9 @@ function RuleEditor({ kind, i, c }: { kind: "ic" | "ec"; i: number; c: Criterion
     return any ? { y, n, u } : null;
   }, [F, c.c, type]);
   // sem o objeto fields, os três campos valem
-  const fields = (["title", "abstract", "keywords"] as Field[]).map((f) => {
+  const fields = ALL_FIELDS.map((f) => {
     const { checked, ...rest } = check(`${base}.fields.${f}`);
-    return <label className="check" key={f}><input {...rest} checked={r.fields ? checked : true} onChange={(e) => { if (!r.fields) setAll(f, e.target.checked); else rest.onChange(e); }} /><span>{FIELD_NAMES[f]}</span></label>;
+    return <label className="check" key={f}><input {...rest} checked={r.fields ? checked : CORE_FIELDS.includes(f)} onChange={(e) => { if (!r.fields) setAll(f, e.target.checked); else rest.onChange(e); }} /><span>{FIELD_NAMES[f]}</span></label>;
   });
   function setAll(f: Field, on: boolean) { updateProtocol((d) => setPath(d, `${base}.fields`, { title: true, abstract: true, keywords: true, [f]: on })); }
   const how = kind === "ic" ? "Atende quando" : "Se aplica quando";
@@ -384,6 +416,10 @@ function useExports() {
       try { const D = await import("docx"); download(name("docx"), await D.Packer.toBlob(buildDocx(D, docModel(p)))); }
       catch { toast("Não foi possível gerar o Word agora. Baixe em Markdown ou copie o texto."); }
     },
+    pdf: async () => {
+      try { const { buildPdfBlob } = await import("@/lib/protocol-pdf"); download(name("pdf"), await buildPdfBlob(docModel(p), p.title || "Protocolo de Revisão da Literatura")); }
+      catch { toast("Não foi possível gerar o PDF agora. Baixe em Word ou Markdown."); }
+    },
   };
 }
 
@@ -421,7 +457,7 @@ function Exports() {
   return (
     <div className="panel">
       <header><h2>Documento</h2></header>
-      <div className="row"><button className="btn" onClick={x.docx}>Baixar protocolo (.docx)</button><button className="btn ghost" onClick={x.md}>Markdown</button></div>
+      <div className="row"><button className="btn" onClick={x.docx}>Baixar protocolo (.docx)</button><button className="btn" onClick={x.pdf}>Baixar PDF</button><button className="btn ghost" onClick={x.md}>Markdown</button></div>
       <p className="note">O <span className="mono">protocolo.json</span> guarda tudo o que está nesta aba e serve para criar outra revisão a partir desta.</p>
       <div className="row"><button className="btn ghost" onClick={x.json}>protocolo.json</button></div>
     </div>
@@ -435,7 +471,7 @@ function DocView() {
   return (
     <div>
       <div className="row" style={{ justifyContent: "flex-end", marginBottom: 12 }}>
-        <button className="btn" onClick={x.docx}>Baixar Word (.docx)</button><button className="btn ghost" onClick={x.md}>Markdown</button><button className="btn ghost" onClick={x.copy}>Copiar texto</button>
+        <button className="btn" onClick={x.docx}>Baixar Word (.docx)</button><button className="btn" onClick={x.pdf}>Baixar PDF</button><button className="btn ghost" onClick={x.md}>Markdown</button><button className="btn ghost" onClick={x.copy}>Copiar texto</button>
       </div>
       <article className="sheet">{M.map((n, i) => <DocBlock key={i} n={n} />)}</article>
     </div>

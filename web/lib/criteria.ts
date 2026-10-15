@@ -6,7 +6,7 @@
  * "u" = indeterminado (falta dado).
  */
 import { langOk } from "./funnel";
-import { intOr, termsOf } from "./protocol";
+import { ALL_FIELDS, CORE_FIELDS, DOC_TYPES, docTypeList, intOr, splitAnd, termsOf } from "./protocol";
 import type { BibRecord, Criterion, CriterionRule, Field, Protocol } from "./types";
 
 export type CritValue = "y" | "n" | "u";
@@ -16,26 +16,48 @@ export const RULE_LABELS: Record<string, string> = {
   none: "Manual", year: "Ano dentro da janela", lang: "Idioma aceito", doctype: "Tipo de documento aceito",
   block: "Termos de um bloco da string", string: "Todos os blocos da string", terms: "Lista de termos",
 };
-export const FIELD_NAMES: Record<Field, string> = { title: "título", abstract: "resumo", keywords: "palavras-chave" };
+export const FIELD_NAMES: Record<Field, string> = { title: "título", abstract: "resumo", keywords: "palavras-chave", authors: "autores", venue: "fonte" };
 
-export function termRegex(terms: string[]): RegExp | null {
-  const parts = terms
-    .map((t) => String(t).trim().replace(/^"+|"+$/g, ""))
-    .filter((t) => t.replace(/\*/g, "").length > 1)
-    .sort((a, b) => b.length - a.length)
-    .map((t) => t.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[\\w-]*").replace(/\s+/g, "[\\s-]+"));
-  if (!parts.length) return null;
-  return new RegExp("(?<![\\w])(" + parts.join("|") + ")(?![\\w])", "i");
+/** Quem procura termos num texto: `exec` devolve a posição e o trecho que casou. */
+export interface TermMatcher { exec(text: string): { index: number; 1: string } | null }
+
+const termSource = (t: string) => t.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[\\w-]*").replace(/\s+/g, "[\\s-]+");
+const wordRe = (src: string) => new RegExp("(?<![\\w])(" + src + ")(?![\\w])", "i");
+
+/** Termos simples casam sozinhos; um termo "a AND b" só casa se todas as partes aparecem no mesmo texto. */
+export function termRegex(terms: string[]): TermMatcher | null {
+  const long = (t: string) => t.replace(/\*/g, "").length > 1;
+  const plain: string[] = [];
+  const groups: RegExp[][] = [];
+  for (const raw of terms) {
+    const parts = splitAnd(String(raw).trim().replace(/^"+|"+$/g, "")).map((s) => s.replace(/^"+|"+$/g, "").trim());
+    if (!parts.length || !parts.every(long)) continue;
+    if (parts.length === 1) plain.push(parts[0]);
+    else groups.push(parts.map((s) => wordRe(termSource(s))));
+  }
+  const simple = plain.length ? wordRe(plain.sort((a, b) => b.length - a.length).map(termSource).join("|")) : null;
+  if (!simple && !groups.length) return null;
+  return {
+    exec(text) {
+      const m = simple?.exec(text);
+      if (m) return { index: m.index, 1: m[1] };
+      for (const g of groups) {
+        const hits = g.map((re) => re.exec(text));
+        if (hits.every(Boolean)) return { index: Math.min(...hits.map((h) => h!.index)), 1: hits.map((h) => h![1]).join(" + ") };
+      }
+      return null;
+    },
+  };
 }
 
-const fieldText = (r: BibRecord, f: Field) => (f === "title" ? r.title : f === "abstract" ? r.abstract : r.keywords) || "";
+const fieldText = (r: BibRecord, f: Field) => ({ title: r.title, abstract: r.abstract, keywords: r.keywords, authors: r.authors, venue: r.venue })[f] || "";
 
 function snippet(text: string, idx: number, len: number) {
   const a = Math.max(0, idx - 50), b = Math.min(text.length, idx + len + 50);
   return (a ? "…" : "") + text.slice(a, b).replace(/\s+/g, " ") + (b < text.length ? "…" : "");
 }
 
-export function findIn(r: BibRecord, re: RegExp, fields: Field[]) {
+export function findIn(r: BibRecord, re: TermMatcher, fields: Field[]) {
   for (const f of fields) {
     const tx = fieldText(r, f);
     const m = re.exec(tx);
@@ -46,8 +68,8 @@ export function findIn(r: BibRecord, re: RegExp, fields: Field[]) {
 
 export function ruleFields(rule: CriterionRule): Field[] {
   const f = rule.fields ?? { title: true, abstract: true, keywords: true };
-  const l = (["title", "abstract", "keywords"] as Field[]).filter((k) => f[k]);
-  return l.length ? l : ["title", "abstract", "keywords"];
+  const l = ALL_FIELDS.filter((k) => f[k]);
+  return l.length ? l : CORE_FIELDS;
 }
 
 export function evalRule(rule: CriterionRule | undefined, r: BibRecord, p: Protocol, kind: "ic" | "ec"): CritEval | null {
@@ -70,7 +92,7 @@ export function evalRule(rule: CriterionRule | undefined, r: BibRecord, p: Proto
   }
   if (rule.type === "doctype") {
     if (!r.docType) return flip(null, "tipo não informado pela base");
-    const ok = (rule.values || "article, journal, conference, inproceedings, proceedings paper").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+    const ok = (rule.values || [...new Set(docTypeList(p).flatMap((d) => DOC_TYPES[d].match))].join(", ") || "article, journal, conference, inproceedings, proceedings paper").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
     return flip(ok.some((o) => r.docType!.toLowerCase().includes(o)), "tipo: " + r.docType);
   }
   let groups: string[][] = [];

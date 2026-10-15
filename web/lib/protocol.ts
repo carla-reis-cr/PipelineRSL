@@ -1,4 +1,4 @@
-import type { Field, Protocol, SearchBlock } from "./types";
+import type { DocType, Field, Protocol, SearchBlock } from "./types";
 import { SOURCE_LABELS } from "./types";
 
 export function intOr(v: unknown): number | null {
@@ -13,21 +13,45 @@ export function termsOf(block: SearchBlock | undefined): string[] {
     .filter(Boolean);
 }
 
-export const quote = (t: string) => `"${String(t).replace(/"/g, "")}"`;
+/**
+ * Um termo pode ser uma frase ("supply chain": palavras juntas) ou um grupo com AND
+ * ("machine AND learning": palavras em qualquer posição). Só o AND em maiúsculas conta.
+ */
+export const splitAnd = (t: string): string[] => String(t).split(/\s+AND\s+/).map((s) => s.trim()).filter(Boolean);
+
+export function quote(t: string): string {
+  const q = (s: string) => `"${s.replace(/"/g, "")}"`;
+  const parts = splitAnd(t);
+  return parts.length > 1 ? "(" + parts.map(q).join(" AND ") + ")" : q(String(t));
+}
 
 export function blocksOf(p: Protocol): string[][] {
   return (p.blocks ?? []).map(termsOf).filter((b) => b.length > 0);
 }
 
+/** Campos de busca. Os três primeiros valem por padrão; os demais só entram se marcados. */
+export const ALL_FIELDS: Field[] = ["title", "abstract", "keywords", "authors", "venue"];
+export const CORE_FIELDS: Field[] = ["title", "abstract", "keywords"];
+export const FIELD_PT: Record<Field, string> = { title: "Título", abstract: "Resumo", keywords: "Palavras-chave", authors: "Autores", venue: "Fonte (periódico ou evento)" };
+export const FIELD_EN: Record<Field, string> = { title: "Title", abstract: "Abstract", keywords: "Keywords", authors: "Authors", venue: "Source title" };
+
+/** Tipos de documento e como cada base os chama (scopus: DOCTYPE; wos: DT; ieee: content_type). */
+export const DOC_TYPES: Record<DocType, { label: string; scopus: string; wos: string; ieee: string; match: string[] }> = {
+  journal: { label: "Artigos de periódico", scopus: "ar", wos: "Article", ieee: "Journals", match: ["article", "journal"] },
+  conference: { label: "Artigos de conferência", scopus: "cp", wos: "Proceedings Paper", ieee: "Conferences", match: ["conference", "inproceedings", "proceedings paper"] },
+  review: { label: "Artigos de revisão", scopus: "re", wos: "Review", ieee: "Journals", match: ["review"] },
+  book_chapter: { label: "Capítulos de livro", scopus: "ch", wos: "Book Chapter", ieee: "Books", match: ["chapter", "incollection"] },
+  book: { label: "Livros", scopus: "bk", wos: "Book", ieee: "Books", match: ["book"] },
+};
+
 export function fieldList(p: Protocol): Field[] {
   const f = p.fields ?? {};
-  const l = (["title", "abstract", "keywords"] as Field[]).filter((k) => f[k] !== false);
-  return l.length ? l : ["title", "abstract", "keywords"];
+  const l = ALL_FIELDS.filter((k) => (CORE_FIELDS.includes(k) ? f[k] !== false : f[k] === true));
+  return l.length ? l : CORE_FIELDS;
 }
 
 export function fieldsLabel(p: Protocol): string {
-  const n: Record<Field, string> = { title: "Título", abstract: "Resumo", keywords: "Palavras-chave" };
-  const l = fieldList(p).map((k) => n[k]);
+  const l = fieldList(p).map((k) => FIELD_PT[k]);
   return l.length > 1 ? l.slice(0, -1).join(", ") + " e " + l[l.length - 1] : l[0];
 }
 
@@ -35,9 +59,9 @@ export function languages(p: Protocol): string[] {
   return (p.langs ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-export function docTypeList(p: Protocol): ("journal" | "conference")[] {
+export function docTypeList(p: Protocol): DocType[] {
   const d = p.docTypes ?? {};
-  return (["journal", "conference"] as const).filter((k) => d[k]);
+  return (Object.keys(DOC_TYPES) as DocType[]).filter((k) => d[k]);
 }
 
 /* ---------- strings para colar no site de cada base ---------- */
@@ -51,14 +75,14 @@ const BUILDERS: Record<string, Builder> = {
     return { s: scopusQuery(p, B, fs, true), notes: ["Cole em Advanced document search."] };
   },
   web_of_science(B, fs, p) {
-    const tag: Record<Field, string> = { title: "TI", abstract: "AB", keywords: "AK" };
+    const tag: Record<Field, string> = { title: "TI", abstract: "AB", keywords: "AK", authors: "AU", venue: "SO" };
     const or = (b: string[]) => "(" + b.map(quote).join(" OR ") + ")";
-    let s = fs.length === 3
+    let s = fs.length === 3 && CORE_FIELDS.every((f) => fs.includes(f))
       ? "TS=(" + B.map(or).join(" AND ") + ")"
       : B.map((b) => "(" + fs.map((f) => tag[f] + "=" + or(b)).join(" OR ") + ")").join(" AND ");
     const yf = intOr(p.yearFrom), yt = intOr(p.yearTo);
     if (yf || yt) s += ` AND PY=(${yf ?? 1900}-${yt ?? new Date().getFullYear()})`;
-    const dt = docTypeList(p).map((d) => ({ journal: '"Article"', conference: '"Proceedings Paper"' })[d]);
+    const dt = [...new Set(docTypeList(p).map((d) => `"${DOC_TYPES[d].wos}"`))];
     if (dt.length) s += " AND DT=(" + dt.join(" OR ") + ")";
     const langs = languages(p);
     if (langs.length) s += " AND LA=(" + langs.map(quote).join(" OR ") + ")";
@@ -73,18 +97,18 @@ const BUILDERS: Record<string, Builder> = {
     return { s, notes };
   },
   acm_dl(B, fs, p) {
-    const nm: Record<Field, string> = { title: "Title", abstract: "Abstract", keywords: "Keywords" };
+    const nm: Record<Field, string> = { title: "Title", abstract: "Abstract", keywords: "Keywords", authors: "Author", venue: "Publication Title" };
     const s = B.map((b) => "[" + b.flatMap((t) => fs.map((f) => `[${nm[f]}: ${quote(t)}]`)).join(" OR ") + "]").join(" AND ");
     const notes = ["Cole em Advanced Search › Edit Query."];
     const yf = intOr(p.yearFrom), yt = intOr(p.yearTo);
     const filt: string[] = [];
     if (yf || yt) filt.push(`Publication Date ${yf ?? "…"}–${yt ?? "atual"}`);
-    if (docTypeList(p).length) filt.push("Content Type: Research Article");
+    if (docTypeList(p).length) filt.push("Content Type: " + docTypeList(p).map((d) => DOC_TYPES[d].label.toLowerCase()).join(", "));
     if (filt.length) notes.push("Filtros no painel lateral: " + filt.join("; ") + ".");
     return { s, notes };
   },
   eric(B, fs) {
-    const tag: Record<Field, string> = { title: "TI", abstract: "AB", keywords: "KW" };
+    const tag: Record<Field, string> = { title: "TI", abstract: "AB", keywords: "KW", authors: "AU", venue: "SO" };
     const s = B.map((b) => "(" + fs.map((f) => `${tag[f]} (${b.map(quote).join(" OR ")})`).join(" OR ") + ")").join(" AND ");
     return { s, notes: ["Sintaxe do EBSCOhost. No eric.ed.gov use a string genérica."] };
   },
@@ -127,7 +151,7 @@ export function scopusQuery(p: Protocol, B = blocksOf(p), fs = fieldList(p), sit
     abstract: "ABS",
     keywords: "KEY",
   } as Record<string, string>)[fs.join(",")];
-  const one: Record<Field, string> = { title: "TITLE", abstract: "ABS", keywords: "KEY" };
+  const one: Record<Field, string> = { title: "TITLE", abstract: "ABS", keywords: "KEY", authors: "AUTH", venue: "SRCTITLE" };
   const or = (b: string[]) => "( " + b.map(quote).join(" OR ") + " )";
   let s = combo
     ? `${combo}( ${B.map(or).join(" AND ")} )`
@@ -137,10 +161,9 @@ export function scopusQuery(p: Protocol, B = blocksOf(p), fs = fieldList(p), sit
   if (yt) s += ` AND PUBYEAR < ${yt + 1}`;
   const dts = docTypeList(p);
   if (dts.length) {
-    const code = { journal: "ar", conference: "cp" };
     s += siteSyntax
-      ? " AND ( " + dts.map((d) => `LIMIT-TO( DOCTYPE , "${code[d]}" )`).join(" OR ") + " )"
-      : " AND ( " + dts.map((d) => `DOCTYPE(${code[d]})`).join(" OR ") + " )";
+      ? " AND ( " + dts.map((d) => `LIMIT-TO( DOCTYPE , "${DOC_TYPES[d].scopus}" )`).join(" OR ") + " )"
+      : " AND ( " + dts.map((d) => `DOCTYPE(${DOC_TYPES[d].scopus})`).join(" OR ") + " )";
   }
   const langs = languages(p);
   if (langs.length) {
@@ -158,7 +181,7 @@ export function scopusQuery(p: Protocol, B = blocksOf(p), fs = fieldList(p), sit
  */
 export function ieeeQuery(B: string[][], fs: Field[], mode: "metadata" | "fields" = "metadata"): string {
   if (mode === "fields") {
-    const nm: Record<Field, string> = { title: '"Document Title"', abstract: '"Abstract"', keywords: '"Author Keywords"' };
+    const nm: Record<Field, string> = { title: '"Document Title"', abstract: '"Abstract"', keywords: '"Author Keywords"', authors: '"Authors"', venue: '"Publication Title"' };
     return B.map((b) => "(" + b.flatMap((t) => fs.map((f) => `${nm[f]}:${quote(t)}`)).join(" OR ") + ")").join(" AND ");
   }
   return B.map((b) => "(" + b.map(quote).join(" OR ") + ")").join(" AND ");

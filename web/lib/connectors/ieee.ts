@@ -1,4 +1,4 @@
-import { blocksOf, docTypeList, fieldList, ieeeQuery, intOr } from "../protocol";
+import { blocksOf, DOC_TYPES, docTypeList, fieldList, ieeeQuery, intOr } from "../protocol";
 import type { BibRecord, Protocol } from "../types";
 import { type Connector, ConnectorError, type SearchPage } from "./types";
 
@@ -18,8 +18,7 @@ const PAGE = 200;
 interface IeeeCursor { t: number; s: number }
 
 function contentTypes(p: Protocol): (string | null)[] {
-  const m = { journal: "Journals", conference: "Conferences" } as const;
-  const l = docTypeList(p).map((d) => m[d]);
+  const l = [...new Set(docTypeList(p).map((d) => DOC_TYPES[d].ieee))];
   return l.length ? l : [null];
 }
 

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { RULE_LABELS, suggestDecision, type CritValue } from "@/lib/criteria";
 import { normDoi } from "@/lib/funnel";
-import { termsOf } from "@/lib/protocol";
+import { splitAnd, termsOf } from "@/lib/protocol";
 import { autoExcludes, critKind, type Stage, type Vote, type VoteDecision } from "@/lib/screening";
 import { SOURCE_LABELS, type Criterion, type KeyedRecord, type Protocol } from "@/lib/types";
 import { useB } from "./store";
@@ -20,7 +20,7 @@ const hasRule = (c: Criterion) => !!c.c && !!c.rule?.type && c.rule.type !== "no
 /** Marca no texto os termos de cada bloco da string, uma cor por bloco. */
 export function useHighlight(p: Protocol) {
   const res = useMemo(() => (p.blocks || []).map((b) => {
-    const terms = termsOf(b).filter((t) => t.replace(/\*/g, "").length > 2).sort((a, b) => b.length - a.length);
+    const terms = termsOf(b).flatMap(splitAnd).filter((t) => t.replace(/\*/g, "").length > 2).sort((a, b) => b.length - a.length);
     return terms.length ? new RegExp("(?<![\\w])(" + terms.map((t) => t.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "\\w*").replace(/\s+/g, "[\\s-]+")).join("|") + ")(?![\\w])", "gi") : null;
   }), [p.blocks]);
   return (text: string | undefined): ReactNode => {
