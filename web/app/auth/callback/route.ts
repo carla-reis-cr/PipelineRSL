@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
+/** Só aceita caminhos internos, para o parâmetro next não virar redirecionamento para fora do site. */
+const safeNext = (n: string | null) => (n && n.startsWith("/") && !n.startsWith("//") ? n : "/");
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
@@ -13,5 +16,5 @@ export async function GET(req: Request) {
       return NextResponse.redirect(to);
     }
   }
-  return NextResponse.redirect(new URL("/", url.origin));
+  return NextResponse.redirect(new URL(safeNext(url.searchParams.get("next")), url.origin));
 }
